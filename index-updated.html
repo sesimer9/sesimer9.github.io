@@ -80,8 +80,8 @@
     <main class="map-wrap">
       <div class="legend">
         <div class="card">
-          <div><span class="sw" style="background:#b42318"></span>入力地点</div>
-          <div><span class="sw" style="background:#e8891c;border:1px solid #c96b00"></span>一致した路線ポリゴン</div>
+          <div><span class="sw" style="background:#2563eb"></span>入力地点</div>
+          <div><span class="sw" style="background:#1d4ed8;border:1px solid #c96b00"></span>一致した路線ポリゴン</div>
         </div>
       </div>
       <div id="map" class="map"></div>
@@ -145,11 +145,11 @@ function styleForFeature(feature, hit=false){
   const gt = (feature.geometry?.type || p.geometryType || '').toUpperCase();
   if(gt.includes('POLYGON')){
     return {
-      color:'#c96b00',
-      weight: hit ? 2.5 : 1,
-      fillColor: routeColors.polygon,
-      fillOpacity: hit ? 0.28 : 0.04,
-      opacity: hit ? 1 : 0.35
+      color:'#1d4ed8',
+      weight: hit ? 2.5 : 1.4,
+      fillColor: '#2563eb',
+      fillOpacity: hit ? 0.32 : 0.10,
+      opacity: hit ? 1 : 0.55
     };
   }
   return { color: routeColors.line, weight: hit ? 4 : 1.2, opacity: hit ? 0.95 : 0.22 };
@@ -178,8 +178,8 @@ function clearHitLayers(){
 function renderHits(hits, lat, lng){
   clearHitLayers();
   pointLayer = L.circleMarker([lat,lng], {
-    radius:7,
-    color:'#fff',
+    radius:18,
+    color:'#ffffff',
     weight:2,
     fillColor:'#b42318',
     fillOpacity:1
