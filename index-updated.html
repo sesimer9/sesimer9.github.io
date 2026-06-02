@@ -30,7 +30,7 @@
   <div class="app">
     <aside class="sidebar">
       <h1>全配置路線 検索・判定アプリ</h1>
-      <p class="lead">住所または緯度経度を入力すると、全配置路線に対して判定します。POLYGON は区域内判定、LINESTRING は 50m バッファ相当の近接判定として扱います。参考のアプリですので必ず地図を見てご自身で判断確認してください。</p>
+      <p class="lead">住所または緯度経度を入力すると、全配置路線に対して判定します。読み込むデータは100mバッファ版です。参考用のアプリですので、必ず地図を見てご自身で最終確認してください。</p>
 
       <div class="card">
         <div class="grid1">
@@ -64,11 +64,11 @@
       <div class="card">
         <strong>判定ルール</strong>
         <div class="chips">
-          <span class="chip">POLYGON → 区域内判定</span>
-          <span class="chip">LINESTRING → 50m近接扱い</span>
+          <span class="chip">100mバッファ版 GeoJSON を使用</span>
           <span class="chip">一致路線のみ地図強調</span>
+          <span class="chip">最終確認は地図で実施</span>
         </div>
-        <p class="mini">GeoJSON は同じフォルダの <code>routes_buffer_50m2_wgs84.geojson</code> を読み込みます。公開時は HTML と GeoJSON を同じ場所に置いてください。</p>
+        <p class="mini">GeoJSON は同じフォルダの <code>routes_from_geojson2_100m.geojson</code> を読み込みます。公開時は HTML と GeoJSON を同じ場所に置いてください。</p>
       </div>
 
       <div class="card">
@@ -81,8 +81,7 @@
       <div class="legend">
         <div class="card">
           <div><span class="sw" style="background:#b42318"></span>入力地点</div>
-          <div><span class="sw" style="background:#e8891c;border:1px solid #c96b00"></span>一致した POLYGON</div>
-          <div><span class="sw line" style="background:#01696f"></span>一致した LINESTRING</div>
+          <div><span class="sw" style="background:#e8891c;border:1px solid #c96b00"></span>一致した路線ポリゴン</div>
         </div>
       </div>
       <div id="map" class="map"></div>
@@ -91,6 +90,8 @@
 
 <script>
 const YAHOO_APP_ID = 'dmVyPTIwMjUwNyZpZD1QMDdkaFFITFh1Jmhhc2g9TVRKaE0yVXhNVGhsWVdFMlpqQXhPUQ';
+const GEOJSON_FILE = './routes_from_geojson2_100m.geojson';
+
 let routeGeojson = null;
 let allLayer = null;
 let hitLayer = null;
@@ -103,19 +104,28 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19,
 map.setView([35.68,139.76], 11);
 
 const els = {
-  address: document.getElementById('address'), lat: document.getElementById('lat'), lng: document.getElementById('lng'),
-  status: document.getElementById('status'), summary: document.getElementById('summary'), resultsList: document.getElementById('resultsList'),
-  searchByAddress: document.getElementById('searchByAddress'), searchByCoords: document.getElementById('searchByCoords'),
-  showAll: document.getElementById('showAll'), clearMap: document.getElementById('clearMap')
+  address: document.getElementById('address'),
+  lat: document.getElementById('lat'),
+  lng: document.getElementById('lng'),
+  status: document.getElementById('status'),
+  summary: document.getElementById('summary'),
+  resultsList: document.getElementById('resultsList'),
+  searchByAddress: document.getElementById('searchByAddress'),
+  searchByCoords: document.getElementById('searchByCoords'),
+  showAll: document.getElementById('showAll'),
+  clearMap: document.getElementById('clearMap')
 };
 
 function setStatus(msg){ els.status.textContent = msg; }
-function setSummary(msg, ok){ els.summary.className = 'result ' + (ok ? 'ok' : 'ng'); els.summary.textContent = msg; }
+function setSummary(msg, ok){
+  els.summary.className = 'result ' + (ok ? 'ok' : 'ng');
+  els.summary.textContent = msg;
+}
 
 async function loadGeojson(){
   if(routeGeojson) return routeGeojson;
-  const res = await fetch('./routes_buffer_50m2_wgs84.geojson');
-  if(!res.ok) throw new Error('routes_buffer_50m2_wgs84.geojson の読み込みに失敗しました。HTML と同じフォルダに配置してください。');
+  const res = await fetch(GEOJSON_FILE);
+  if(!res.ok) throw new Error(`${GEOJSON_FILE} の読み込みに失敗しました。HTML と同じフォルダに配置してください。`);
   routeGeojson = await res.json();
   return routeGeojson;
 }
@@ -125,7 +135,8 @@ function normalizeProps(p={}){
     masterId: p.master_id || p.masterid || '',
     routeNo: p.route_no || p.routeno || '',
     displayName: p.display_name || p.displayname || p.official_route_name || p.officialroutename || p.common_name || p.commonname || '',
-    geometryType: (p.geometry_type || p.geometrytype || '').toUpperCase()
+    geometryType: (p.geometry_type || p.geometrytype || '').toUpperCase(),
+    bufferM: p.buffer_m || ''
   };
 }
 
@@ -133,7 +144,13 @@ function styleForFeature(feature, hit=false){
   const p = normalizeProps(feature.properties || {});
   const gt = (feature.geometry?.type || p.geometryType || '').toUpperCase();
   if(gt.includes('POLYGON')){
-    return { color:'#c96b00', weight: hit ? 2.5 : 1, fillColor: routeColors.polygon, fillOpacity: hit ? 0.28 : 0.04, opacity: hit ? 1 : 0.35 };
+    return {
+      color:'#c96b00',
+      weight: hit ? 2.5 : 1,
+      fillColor: routeColors.polygon,
+      fillOpacity: hit ? 0.28 : 0.04,
+      opacity: hit ? 1 : 0.35
+    };
   }
   return { color: routeColors.line, weight: hit ? 4 : 1.2, opacity: hit ? 0.95 : 0.22 };
 }
@@ -141,7 +158,8 @@ function styleForFeature(feature, hit=false){
 function popupText(feature){
   const p = normalizeProps(feature.properties || {});
   const gt = feature.geometry?.type || p.geometryType || 'UNKNOWN';
-  return `<strong>${p.masterId || 'NO-ID'}</strong><br>${p.displayName || '名称なし'}<br>Geometry: ${gt}`;
+  const bufferText = p.bufferM ? `<br>Buffer: ${p.bufferM}m` : '';
+  return `<strong>${p.masterId || 'NO-ID'}</strong><br>${p.displayName || '名称なし'}<br>Geometry: ${gt}${bufferText}`;
 }
 
 function renderAllRoutes(){
@@ -159,7 +177,14 @@ function clearHitLayers(){
 
 function renderHits(hits, lat, lng){
   clearHitLayers();
-  pointLayer = L.circleMarker([lat,lng], { radius:7, color:'#fff', weight:2, fillColor:'#b42318', fillOpacity:1 }).bindPopup(`入力地点<br>${lat}, ${lng}`).addTo(map);
+  pointLayer = L.circleMarker([lat,lng], {
+    radius:7,
+    color:'#fff',
+    weight:2,
+    fillColor:'#b42318',
+    fillOpacity:1
+  }).bindPopup(`入力地点<br>${lat}, ${lng}`).addTo(map);
+
   if(hits.length){
     hitLayer = L.geoJSON({ type:'FeatureCollection', features:hits }, {
       style: f => styleForFeature(f, true),
@@ -173,15 +198,17 @@ function renderHits(hits, lat, lng){
 }
 
 function featureMatches(point, feature){
-  const gt = (feature.geometry?.type || '').toUpperCase();
-  if(gt.includes('POLYGON')) return turf.booleanPointInPolygon(point, feature);
   return turf.booleanPointInPolygon(point, feature);
 }
 
 function judge(lat, lng){
   const point = turf.point([lng, lat]);
   return routeGeojson.features.filter(f => {
-    try { return featureMatches(point, f); } catch(e) { return false; }
+    try {
+      return featureMatches(point, f);
+    } catch(e) {
+      return false;
+    }
   });
 }
 
@@ -193,14 +220,16 @@ function renderResults(hits){
   els.resultsList.innerHTML = hits.map((f, i) => {
     const p = normalizeProps(f.properties || {});
     const gt = (f.geometry?.type || p.geometryType || '').toUpperCase();
-    const kind = gt.includes('POLYGON') ? '区域内' : '近接';
-    return `<div class="result-item"><strong>${i+1}. ${p.masterId || 'NO-ID'}</strong>${p.displayName || '名称なし'}<br>${kind} / ${gt}</div>`;
+    const bufferText = p.bufferM ? ` / ${p.bufferM}m` : '';
+    return `<div class="result-item"><strong>${i+1}. ${p.masterId || 'NO-ID'}</strong>${p.displayName || '名称なし'}<br>${gt}${bufferText}</div>`;
   }).join('');
 }
 
 function updateSummary(lat, lng, hits, sourceLabel){
   if(hits.length){
-    setSummary(`${sourceLabel}\n判定座標: ${lat}, ${lng}\n一致件数: ${hits.length}件\n先頭一致: ${(normalizeProps(hits[0].properties||{}).masterId) || 'NO-ID'}`, true);
+    const first = normalizeProps(hits[0].properties || {});
+    const bufferText = first.bufferM ? `\nバッファ: ${first.bufferM}m` : '';
+    setSummary(`${sourceLabel}\n判定座標: ${lat}, ${lng}\n一致件数: ${hits.length}件\n先頭一致: ${first.masterId || 'NO-ID'}${bufferText}`, true);
   } else {
     setSummary(`${sourceLabel}\n判定座標: ${lat}, ${lng}\n一致件数: 0件`, false);
   }
@@ -217,6 +246,7 @@ function geocodeAddressYahoo(address){
   return new Promise((resolve, reject) => {
     const cb = 'yahooGeoCallback_' + Date.now() + '_' + Math.floor(Math.random()*10000);
     const script = document.createElement('script');
+
     window[cb] = (data) => {
       cleanup();
       const info = data?.ResultInfo;
@@ -224,8 +254,17 @@ function geocodeAddressYahoo(address){
       if(!info || info.Status !== 200 || !feature) return reject(new Error('住所検索結果が取得できませんでした。'));
       resolve(feature);
     };
-    function cleanup(){ if(script.parentNode) script.parentNode.removeChild(script); delete window[cb]; }
-    script.onerror = () => { cleanup(); reject(new Error('Yahoo! ジオコーダの読み込みに失敗しました。')); };
+
+    function cleanup(){
+      if(script.parentNode) script.parentNode.removeChild(script);
+      delete window[cb];
+    }
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('Yahoo! ジオコーダの読み込みに失敗しました。'));
+    };
+
     script.src = `https://map.yahooapis.jp/geocode/V1/geoCoder?appid=${encodeURIComponent(YAHOO_APP_ID)}&query=${encodeURIComponent(address)}&output=json&callback=${encodeURIComponent(cb)}`;
     document.body.appendChild(script);
   });
@@ -275,19 +314,55 @@ async function runByAddress(){
 }
 
 els.searchByCoords.addEventListener('click', async () => {
-  try { await runByCoords(); } catch(e){ setSummary(e.message, false); setStatus('エラー'); }
+  try {
+    await runByCoords();
+  } catch(e){
+    setSummary(e.message, false);
+    setStatus('エラー');
+  }
 });
+
 els.searchByAddress.addEventListener('click', async () => {
-  try { await runByAddress(); } catch(e){ setSummary(e.message, false); setStatus('エラー'); }
+  try {
+    await runByAddress();
+  } catch(e){
+    setSummary(e.message, false);
+    setStatus('エラー');
+  }
 });
+
 els.showAll.addEventListener('click', async () => {
-  try { await loadGeojson(); renderAllRoutes(); map.fitBounds(allLayer.getBounds().pad(0.05)); setStatus('全配置路線を表示しました。'); } catch(e){ setSummary(e.message, false); }
+  try {
+    await loadGeojson();
+    renderAllRoutes();
+    map.fitBounds(allLayer.getBounds().pad(0.05));
+    setStatus('全配置路線を表示しました。');
+  } catch(e){
+    setSummary(e.message, false);
+  }
 });
-els.clearMap.addEventListener('click', () => { clearHitLayers(); lastHits = []; els.resultsList.innerHTML = '<div class="mini">検索結果がここに表示されます。</div>'; setSummary('まだ判定していません。', false); setStatus('地図上の検索結果をクリアしました。'); if(allLayer) map.fitBounds(allLayer.getBounds().pad(0.05)); });
+
+els.clearMap.addEventListener('click', () => {
+  clearHitLayers();
+  lastHits = [];
+  els.resultsList.innerHTML = '<div class="mini">検索結果がここに表示されます。</div>';
+  setSummary('まだ判定していません。', false);
+  setStatus('地図上の検索結果をクリアしました。');
+  if(allLayer) map.fitBounds(allLayer.getBounds().pad(0.05));
+});
 
 (async function init(){
-  try { setStatus('GeoJSON 読み込み中...'); await loadGeojson(); renderAllRoutes(); map.fitBounds(allLayer.getBounds().pad(0.05)); setStatus('準備完了'); setSummary('初期表示が完了しました。住所または緯度経度で判定できます。', true); }
-  catch(e){ setSummary(e.message, false); setStatus('初期化エラー'); }
+  try {
+    setStatus('GeoJSON 読み込み中...');
+    await loadGeojson();
+    renderAllRoutes();
+    map.fitBounds(allLayer.getBounds().pad(0.05));
+    setStatus('準備完了');
+    setSummary('初期表示が完了しました。住所または緯度経度で判定できます。', true);
+  } catch(e){
+    setSummary(e.message, false);
+    setStatus('初期化エラー');
+  }
 })();
 </script>
 </body>
