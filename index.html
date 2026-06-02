@@ -1,13 +1,453 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>住所配置路線チェッカー</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>全配置路線 検索・判定アプリ</title>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    :root{--bg:#f7f6f2;--surface:#ffffff;--surface2:#fbfbf9;--text:#28251d;--muted:#6f6d68;--primary:#01696f;--primary2:#0c4e54;--accent:#e8891c;--danger:#b42318;--ok:#215c3c;--okbg:#dcefe2;--ng:#7b2330;--ngbg:#f5dde1;--warn:#7a5320;--warnbg:#f6ebd7;--border:#d8d4cc;--shadow:0 14px 34px rgba(40,37,29,.08);--radius:18px}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    .app{display:grid;grid-template-columns:420px 1fr;min-height:100vh}
+    .sidebar{padding:22px;background:var(--surface2);border-right:1px solid var(--border);overflow:auto}
+    .map-wrap{position:relative}
+    .map{height:100vh;width:100%}
+    h1{font-size:1.5rem;line-height:1.25;margin:0 0 10px}
+    p{line-height:1.6}
+    .lead{color:var(--muted);margin:0 0 18px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid1{display:grid;gap:10px}
+    label{display:block;font-size:.92rem;font-weight:700;margin-bottom:6px}
+    input,textarea,select{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:15px;background:#fff}
+    textarea{min-height:78px;resize:vertical}
+    button{appearance:none;border:none;border-radius:12px;padding:12px 14px;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+    button:hover{background:var(--primary2)}
+    button.secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row>*{flex:1}
+    .status,.result{padding:14px;border-radius:14px;margin-top:12px;white-space:pre-wrap}
+    .status{background:var(--warnbg);color:var(--warn)}
+    .result.ok{background:var(--okbg);color:var(--ok)}
+    .result.ng{background:var(--ngbg);color:var(--ng)}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .chip{padding:6px 10px;border-radius:999px;background:#fff;border:1px solid var(--border);font-size:.82rem}
+    .mini{font-size:.88rem;color:var(--muted)}
+    .legend{position:absolute;right:18px;top:18px;z-index:600;max-width:320px}
+    .legend .card{backdrop-filter:blur(8px);background:rgba(255,255,255,.92)}
+    .sw{display:inline-block;width:12px;height:12px;border-radius:999px;margin-right:8px;vertical-align:middle}
+    .line{height:5px;border-radius:3px}
+    .results-list{display:grid;gap:10px;margin-top:12px}
+    .result-item{padding:12px;border:1px solid var(--border);border-radius:14px;background:#fff}
+    .result-item strong{display:block;margin-bottom:5px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .toolbar button{flex:none}
+    .footer-links{font-size:.9rem;line-height:1.8}
+    .footer-links a{color:var(--primary);text-decoration:none}
+    .footer-links a:hover{text-decoration:underline}
+    @media (max-width:980px){
+      .app{grid-template-columns:1fr}
+      .map{height:68vh}
+      .sidebar{border-right:none;border-bottom:1px solid var(--border)}
+      .legend{position:static;max-width:none;padding:0 14px 14px}
+    }
+  </style>
 </head>
 <body>
-  <h1>住所配置路線チェッカー</h1>
-  <p>このページは検証用の仮公開ページです。</p>
-  <p>Yahoo!ジオコーダAPI利用登録のために設置しています。</p>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>全配置路線 検索・判定アプリ</h1>
+      <p class="lead">住所または緯度経度を入力すると、全配置路線に対して判定します。POLYGON は区域内判定、LINESTRING は 50m バッファ相当の近接判定として扱います。</p>
+
+      <div class="card">
+        <div class="grid1">
+          <div>
+            <label for="address">住所</label>
+            <input id="address" type="text" placeholder="例：東京都江東区青海4丁目4-18" value="東京都江東区青海4丁目4-18" />
+          </div>
+          <div class="grid2">
+            <div>
+              <label for="lat">緯度</label>
+              <input id="lat" type="text" placeholder="35.61583174" value="35.61583174" />
+            </div>
+            <div>
+              <label for="lng">経度</label>
+              <input id="lng" type="text" placeholder="139.78443411" value="139.78443411" />
+            </div>
+          </div>
+          <div class="row">
+            <button id="searchByAddress">住所で検索</button>
+            <button id="searchByCoords" class="secondary">緯度経度で検索</button>
+          </div>
+          <div class="toolbar">
+            <button id="showAll" class="secondary">全一致を表示</button>
+            <button id="clearMap" class="secondary">地図クリア</button>
+          </div>
+        </div>
+        <div id="status" class="status">GeoJSON 読み込み待機中</div>
+        <div id="summary" class="result ng">まだ判定していません。</div>
+      </div>
+
+      <div class="card">
+        <strong>判定ルール</strong>
+        <div class="chips">
+          <span class="chip">POLYGON → 区域内判定</span>
+          <span class="chip">LINESTRING → 50m近接扱い</span>
+          <span class="chip">一致路線のみ地図強調</span>
+        </div>
+        <p class="mini">
+          GeoJSON は同じフォルダの <code>routes_buffer_50m.geojson</code> と
+          <code>tokyo_048_01.geojson</code> を読み込みます。
+          公開時は HTML と GeoJSON を同じ場所に置いてください。
+        </p>
+      </div>
+
+      <div class="card">
+        <strong>一致路線</strong>
+        <div id="resultsList" class="results-list">
+          <div class="mini">検索結果がここに表示されます。</div>
+        </div>
+      </div>
+
+      <div class="card footer-links">
+        <strong>関連ページ</strong><br>
+        <a href="./privacy.html" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a><br>
+        <a href="./terms.html" target="_blank" rel="noopener noreferrer">利用規約</a>
+      </div>
+    </aside>
+
+    <main class="map-wrap">
+      <div class="legend">
+        <div class="card">
+          <div><span class="sw" style="background:#b42318"></span>入力地点</div>
+          <div><span class="sw" style="background:#e8891c;border:1px solid #c96b00"></span>一致した POLYGON</div>
+          <div><span class="sw line" style="background:#01696f"></span>一致した LINESTRING</div>
+        </div>
+      </div>
+      <div id="map" class="map"></div>
+    </main>
+  </div>
+
+<script>
+const YAHOO_APP_ID = 'dmVyPTIwMjUwNyZpZD1QMDdkaFFITFh1Jmhhc2g9TVRKaE0yVXhNVGhsWVdFMlpqQXhPUQ';
+let routeGeojson = null;
+let extra048Geojson = null;
+let allLayer = null;
+let hitLayer = null;
+let pointLayer = null;
+let lastHits = [];
+const routeColors = { polygon: '#e8891c', line: '#01696f' };
+
+const map = L.map('map');
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+map.setView([35.68,139.76], 11);
+
+const els = {
+  address: document.getElementById('address'),
+  lat: document.getElementById('lat'),
+  lng: document.getElementById('lng'),
+  status: document.getElementById('status'),
+  summary: document.getElementById('summary'),
+  resultsList: document.getElementById('resultsList'),
+  searchByAddress: document.getElementById('searchByAddress'),
+  searchByCoords: document.getElementById('searchByCoords'),
+  showAll: document.getElementById('showAll'),
+  clearMap: document.getElementById('clearMap')
+};
+
+function setStatus(msg){ els.status.textContent = msg; }
+function setSummary(msg, ok){ els.summary.className = 'result ' + (ok ? 'ok' : 'ng'); els.summary.textContent = msg; }
+
+async function loadGeojson(){
+  if(routeGeojson) return routeGeojson;
+
+  const baseRes = await fetch('./routes_buffer_50m.geojson');
+  if(!baseRes.ok){
+    throw new Error('routes_buffer_50m.geojson の読み込みに失敗しました。HTML と同じフォルダに配置してください。');
+  }
+  const baseData = await baseRes.json();
+
+  const extraRes = await fetch('./tokyo_048_01.geojson');
+  if(!extraRes.ok){
+    throw new Error('tokyo_048_01.geojson の読み込みに失敗しました。HTML と同じフォルダに配置してください。');
+  }
+  extra048Geojson = await extraRes.json();
+
+  routeGeojson = {
+    type: 'FeatureCollection',
+    features: [
+      ...(baseData.features || []),
+      ...(extra048Geojson.features || [])
+    ]
+  };
+
+  return routeGeojson;
+}
+
+function normalizeProps(p={}){
+  return {
+    masterId: p.master_id || p.masterid || '',
+    routeNo: p.route_no || p.routeno || '',
+    displayName:
+      p.display_name || p.displayname ||
+      p.official_route_name || p.officialroutename ||
+      p.common_name || p.commonname || '',
+    geometryType: (p.geometry_type || p.geometrytype || '').toUpperCase()
+  };
+}
+
+function styleForFeature(feature, hit=false){
+  const p = normalizeProps(feature.properties || {});
+  const gt = (feature.geometry?.type || p.geometryType || '').toUpperCase();
+  if(gt.includes('POLYGON')){
+    return {
+      color:'#c96b00',
+      weight: hit ? 2.5 : 1,
+      fillColor: routeColors.polygon,
+      fillOpacity: hit ? 0.28 : 0.04,
+      opacity: hit ? 1 : 0.35
+    };
+  }
+  return {
+    color: routeColors.line,
+    weight: hit ? 4 : 1.2,
+    opacity: hit ? 0.95 : 0.22
+  };
+}
+
+function popupText(feature){
+  const p = normalizeProps(feature.properties || {});
+  const gt = feature.geometry?.type || p.geometryType || 'UNKNOWN';
+  return `<strong>${p.masterId || 'NO-ID'}</strong><br>${p.displayName || '名称なし'}<br>Geometry: ${gt}`;
+}
+
+function renderAllRoutes(){
+  if(allLayer) map.removeLayer(allLayer);
+  allLayer = L.geoJSON(routeGeojson, {
+    style: f => styleForFeature(f, false),
+    onEachFeature: (f,l) => l.bindPopup(popupText(f))
+  }).addTo(map);
+}
+
+function clearHitLayers(){
+  if(hitLayer) map.removeLayer(hitLayer);
+  if(pointLayer) map.removeLayer(pointLayer);
+}
+
+function renderHits(hits, lat, lng){
+  clearHitLayers();
+  pointLayer = L.circleMarker([lat,lng], {
+    radius:7,
+    color:'#fff',
+    weight:2,
+    fillColor:'#b42318',
+    fillOpacity:1
+  }).bindPopup(`入力地点<br>${lat}, ${lng}`).addTo(map);
+
+  if(hits.length){
+    hitLayer = L.geoJSON({ type:'FeatureCollection', features:hits }, {
+      style: f => styleForFeature(f, true),
+      onEachFeature: (f,l) => l.bindPopup(popupText(f))
+    }).addTo(map);
+    const group = L.featureGroup([hitLayer, pointLayer]);
+    map.fitBounds(group.getBounds().pad(0.2));
+  } else {
+    map.setView([lat,lng], 15);
+  }
+}
+
+function featureMatches(point, feature){
+  const gt = (feature.geometry?.type || '').toUpperCase();
+  if(gt.includes('POLYGON')){
+    return turf.booleanPointInPolygon(point, feature);
+  }
+  return turf.booleanPointInPolygon(point, feature);
+}
+
+function judge(lat, lng){
+  const point = turf.point([lng, lat]);
+  return routeGeojson.features.filter(f => {
+    try { return featureMatches(point, f); }
+    catch(e){ return false; }
+  });
+}
+
+function renderResults(hits){
+  if(!hits.length){
+    els.resultsList.innerHTML = '<div class="mini">一致する配置路線は見つかりませんでした。</div>';
+    return;
+  }
+  els.resultsList.innerHTML = hits.map((f, i) => {
+    const p = normalizeProps(f.properties || {});
+    const gt = (f.geometry?.type || p.geometryType || '').toUpperCase();
+    const kind = gt.includes('POLYGON') ? '区域内' : '近接';
+    return `
+      <div class="result-item">
+        <strong>${i+1}. ${p.masterId || 'NO-ID'}</strong>
+        ${p.displayName || '名称なし'}<br>
+        ${kind} / ${gt}
+      </div>
+    `;
+  }).join('');
+}
+
+function updateSummary(lat, lng, hits, sourceLabel){
+  if(hits.length){
+    const firstId = normalizeProps(hits[0].properties || {}).masterId || 'NO-ID';
+    setSummary(
+      `${sourceLabel}\n判定座標: ${lat}, ${lng}\n一致件数: ${hits.length}件\n先頭一致: ${firstId}`,
+      true
+    );
+  } else {
+    setSummary(
+      `${sourceLabel}\n判定座標: ${lat}, ${lng}\n一致件数: 0件`,
+      false
+    );
+  }
+}
+
+function parseCoords(){
+  const lat = Number(els.lat.value.trim());
+  const lng = Number(els.lng.value.trim());
+  if(Number.isNaN(lat) || Number.isNaN(lng)){
+    throw new Error('緯度経度の入力が不正です。');
+  }
+  return { lat, lng };
+}
+
+function geocodeAddressYahoo(address){
+  return new Promise((resolve, reject) => {
+    const cb = 'yahooGeoCallback_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const script = document.createElement('script');
+
+    window[cb] = (data) => {
+      cleanup();
+      const info = data?.ResultInfo;
+      const feature = data?.Feature?.[0];
+      if(!info || info.Status !== 200 || !feature){
+        return reject(new Error('住所検索結果が取得できませんでした。'));
+      }
+      resolve(feature);
+    };
+
+    function cleanup(){
+      if(script.parentNode) script.parentNode.removeChild(script);
+      delete window[cb];
+    }
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('Yahoo! ジオコーダの読み込みに失敗しました。'));
+    };
+
+    script.src =
+      `https://map.yahooapis.jp/geocode/V1/geoCoder?appid=${encodeURIComponent(YAHOO_APP_ID)}` +
+      `&query=${encodeURIComponent(address)}&output=json&callback=${encodeURIComponent(cb)}`;
+    document.body.appendChild(script);
+  });
+}
+
+function parseYahooCoordinates(feature){
+  const coordinates = feature?.Geometry?.Coordinates;
+  if(!coordinates) throw new Error('住所検索結果の座標を読めませんでした。');
+  const parts = coordinates.split(',');
+  if(parts.length !== 2) throw new Error('住所検索結果の座標形式が不正です。');
+  const lng = Number(parts[0]);
+  const lat = Number(parts[1]);
+  if(Number.isNaN(lat) || Number.isNaN(lng)){
+    throw new Error('住所検索結果の数値変換に失敗しました。');
+  }
+  return { lat, lng };
+}
+
+async function runByCoords(){
+  const { lat, lng } = parseCoords();
+  setStatus('GeoJSON を読み込み、全配置路線を判定中...');
+  await loadGeojson();
+  renderAllRoutes();
+  const hits = judge(lat, lng);
+  lastHits = hits;
+  renderHits(hits, lat, lng);
+  renderResults(hits);
+  updateSummary(lat, lng, hits, '緯度経度で判定しました。');
+  setStatus('判定完了');
+}
+
+async function runByAddress(){
+  const address = els.address.value.trim();
+  if(!address) throw new Error('住所を入力してください。');
+  setStatus('GeoJSON と住所検索を実行中...');
+  await loadGeojson();
+  renderAllRoutes();
+  const feature = await geocodeAddressYahoo(address);
+  const { lat, lng } = parseYahooCoordinates(feature);
+  els.lat.value = lat;
+  els.lng.value = lng;
+  const hits = judge(lat, lng);
+  lastHits = hits;
+  renderHits(hits, lat, lng);
+  renderResults(hits);
+  const display = feature?.Property?.Address || feature?.Name || address;
+  updateSummary(lat, lng, hits, `住所で判定しました。\n検索結果: ${display}`);
+  setStatus('判定完了');
+}
+
+els.searchByCoords.addEventListener('click', async () => {
+  try { await runByCoords(); }
+  catch(e){
+    setSummary(e.message, false);
+    setStatus('エラー');
+  }
+});
+
+els.searchByAddress.addEventListener('click', async () => {
+  try { await runByAddress(); }
+  catch(e){
+    setSummary(e.message, false);
+    setStatus('エラー');
+  }
+});
+
+els.showAll.addEventListener('click', async () => {
+  try {
+    await loadGeojson();
+    renderAllRoutes();
+    map.fitBounds(allLayer.getBounds().pad(0.05));
+    setStatus('全配置路線を表示しました。');
+  } catch(e){
+    setSummary(e.message, false);
+  }
+});
+
+els.clearMap.addEventListener('click', () => {
+  clearHitLayers();
+  lastHits = [];
+  els.resultsList.innerHTML = '<div class="mini">検索結果がここに表示されます。</div>';
+  setSummary('まだ判定していません。', false);
+  setStatus('地図上の検索結果をクリアしました。');
+  if(allLayer) map.fitBounds(allLayer.getBounds().pad(0.05));
+});
+
+(async function init(){
+  try {
+    setStatus('GeoJSON 読み込み中...');
+    await loadGeojson();
+    renderAllRoutes();
+    map.fitBounds(allLayer.getBounds().pad(0.05));
+    setStatus('準備完了');
+    setSummary('初期表示が完了しました。住所または緯度経度で判定できます。', true);
+  } catch(e){
+    setSummary(e.message, false);
+    setStatus('初期化エラー');
+  }
+})();
+</script>
 </body>
 </html>
