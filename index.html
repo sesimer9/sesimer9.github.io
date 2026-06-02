@@ -100,7 +100,7 @@
           <span class="chip">一致路線のみ地図強調</span>
         </div>
         <p class="mini">
-          GeoJSON は同じフォルダの <code>routes_buffer_50m.geojson</code> と
+          GeoJSON は同じフォルダの <code>routes_buffer_50m2_wgs84.geojson</code> と
           <code>tokyo_048_01.geojson</code> を読み込みます。
           公開時は HTML と GeoJSON を同じ場所に置いてください。
         </p>
@@ -168,9 +168,9 @@ function setSummary(msg, ok){ els.summary.className = 'result ' + (ok ? 'ok' : '
 async function loadGeojson(){
   if(routeGeojson) return routeGeojson;
 
-  const baseRes = await fetch('./routes_buffer_50m.geojson');
+  const baseRes = await fetch('./routes_buffer_50m2_wgs84.geojson');
   if(!baseRes.ok){
-    throw new Error('routes_buffer_50m.geojson の読み込みに失敗しました。HTML と同じフォルダに配置してください。');
+    throw new Error('routes_buffer_50m2_wgs84.geojson の読み込みに失敗しました。HTML と同じフォルダに配置してください。');
   }
   const baseData = await baseRes.json();
 
