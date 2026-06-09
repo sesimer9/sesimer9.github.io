@@ -97,10 +97,6 @@
       font-size:15px;
       background:#fff;
     }
-    textarea{
-      min-height:78px;
-      resize:vertical;
-    }
     button{
       appearance:none;
       border:none;
@@ -186,10 +182,6 @@
       margin-right:8px;
       vertical-align:middle;
     }
-    .line{
-      height:5px;
-      border-radius:3px;
-    }
     .results-list{
       display:grid;
       gap:10px;
@@ -217,14 +209,15 @@
     .hidden{
       display:none !important;
     }
-    .gate-note{
-      font-size:.9rem;
-      color:var(--muted);
-      margin-top:8px;
-    }
     .required{
       color:var(--danger);
       margin-left:4px;
+    }
+    iframe.hidden-frame{
+      display:none;
+      width:0;
+      height:0;
+      border:0;
     }
     @media (max-width:980px){
       .app{
@@ -253,29 +246,44 @@
 
       <div id="gateCard" class="card">
         <strong>利用申請</strong>
-        <div class="grid1" style="margin-top:12px;">
-          <div>
-            <label for="company">会社名<span class="required">※必須</span></label>
-            <input id="company" type="text" placeholder="株式会社〇〇" />
+
+        <form
+          id="gateForm"
+          action="https://script.google.com/macros/s/AKfycbzDr5yPZsP7FG6hTqkfIiYEWYN5uMzBVWHxWLE36OCLfypzDx_RLB8BxQuJNZjKxbmu/exec"
+          method="POST"
+          target="hidden_iframe"
+        >
+          <div class="grid1" style="margin-top:12px;">
+            <div>
+              <label for="company">会社名<span class="required">※必須</span></label>
+              <input id="company" name="company" type="text" placeholder="株式会社〇〇" required />
+            </div>
+            <div>
+              <label for="userName">氏名<span class="required">※必須</span></label>
+              <input id="userName" name="name" type="text" placeholder="山田 太郎" required />
+            </div>
+            <div>
+              <label for="userEmail">メールアドレス<span class="required">※必須</span></label>
+              <input id="userEmail" name="email" type="email" placeholder="example@company.co.jp" required />
+            </div>
+            <div>
+              <label for="userPhone">電話番号<span class="required">※必須</span></label>
+              <input id="userPhone" name="phone" type="tel" placeholder="090-1234-5678" required />
+            </div>
           </div>
-          <div>
-            <label for="userName">氏名<span class="required">※必須</span></label>
-            <input id="userName" type="text" placeholder="山田 太郎" />
+
+          <input type="hidden" id="pageField" name="page" value="" />
+          <input type="hidden" id="userAgentField" name="userAgent" value="" />
+
+          <div class="row" style="margin-top:12px;">
+            <button id="submitGate" type="submit">送信して利用開始</button>
           </div>
-          <div>
-            <label for="userEmail">メールアドレス<span class="required">※必須</span></label>
-            <input id="userEmail" type="email" placeholder="example@company.co.jp" />
-          </div>
-          <div>
-            <label for="userPhone">電話番号<span class="required">※必須</span></label>
-            <input id="userPhone" type="tel" placeholder="090-1234-5678" />
-          </div>
-        </div>
-        <div class="row" style="margin-top:12px;">
-          <button id="submitGate">送信して利用開始</button>
-        </div>
+        </form>
+
+        <iframe name="hidden_iframe" class="hidden-frame"></iframe>
+
         <div id="gateStatus" class="status">必要事項を入力して送信してください。</div>
-        <p class="gate-note">送信内容は管理者へ通知されます。送信後、このブラウザ画面内で検索機能を利用できます。</p>
+        <p class="mini">送信内容は管理者へ通知されます。送信後、このブラウザ画面内で検索機能を利用できます。</p>
       </div>
 
       <div id="appBody" class="hidden">
@@ -339,13 +347,11 @@
   <script>
     const YAHOO_APP_ID = 'dmVyPTIwMjUwNyZpZD1QMDdkaFFITFh1Jmhhc2g9TVRKaE0yVXhNVGhsWVdFMlpqQXhPUQ';
     const GEOJSON_FILE = './routes-from-geojson5-100m.geojson';
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzDr5yPZsP7FG6hTqkfIiYEWYN5uMzBVWHxWLE36OCLfypzDx_RLB8BxQuJNZjKxbmu/exec';
 
     let routeGeojson = null;
     let allLayer = null;
     let hitLayer = null;
     let pointLayer = null;
-    let lastHits = [];
 
     const routeColors = {
       polygon: '#e8891c',
@@ -360,14 +366,13 @@
     map.setView([35.68, 139.76], 11);
 
     const els = {
-      company: document.getElementById('company'),
-      userName: document.getElementById('userName'),
-      userEmail: document.getElementById('userEmail'),
-      userPhone: document.getElementById('userPhone'),
-      submitGate: document.getElementById('submitGate'),
+      gateForm: document.getElementById('gateForm'),
       gateCard: document.getElementById('gateCard'),
       gateStatus: document.getElementById('gateStatus'),
       appBody: document.getElementById('appBody'),
+      submitGate: document.getElementById('submitGate'),
+      pageField: document.getElementById('pageField'),
+      userAgentField: document.getElementById('userAgentField'),
 
       address: document.getElementById('address'),
       lat: document.getElementById('lat'),
@@ -393,10 +398,10 @@
     }
 
     function validateGateForm() {
-      const company = els.company.value.trim();
-      const userName = els.userName.value.trim();
-      const userEmail = els.userEmail.value.trim();
-      const userPhone = els.userPhone.value.trim();
+      const company = document.getElementById('company').value.trim();
+      const userName = document.getElementById('userName').value.trim();
+      const userEmail = document.getElementById('userEmail').value.trim();
+      const userPhone = document.getElementById('userPhone').value.trim();
 
       if (!company || !userName || !userEmail || !userPhone) {
         throw new Error('会社名・氏名・メールアドレス・電話番号をすべて入力してください。');
@@ -406,50 +411,26 @@
       if (!emailOk) {
         throw new Error('メールアドレスの形式を確認してください。');
       }
-
-      return { company, userName, userEmail, userPhone };
     }
 
-    async function submitGateForm() {
-      const data = validateGateForm();
-
-      els.submitGate.disabled = true;
-      setGateStatus('送信中です…');
-
+    els.gateForm.addEventListener('submit', function() {
       try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8'
-          },
-          body: JSON.stringify({
-            company: data.company,
-            name: data.userName,
-            email: data.userEmail,
-            phone: data.userPhone,
-            page: location.href,
-            userAgent: navigator.userAgent
-          })
-        });
-
-        const text = await res.text();
-        let json = {};
-        try {
-          json = JSON.parse(text);
-        } catch (e) {}
-
-        if (!res.ok || json.ok === false) {
-          throw new Error('送信に失敗しました。Apps Script 側の公開設定を確認してください。');
-        }
-
-        setGateStatus('送信できました。検索・判定機能を表示します。', true);
-        unlockApp();
-      } catch (error) {
-        setGateStatus('送信エラー: ' + error.message);
-      } finally {
+        validateGateForm();
+        els.pageField.value = location.href;
+        els.userAgentField.value = navigator.userAgent;
+        els.submitGate.disabled = true;
+        setGateStatus('送信中です…');
+        setTimeout(() => {
+          setGateStatus('送信を受け付けました。検索・判定機能を表示します。', true);
+          unlockApp();
+          els.submitGate.disabled = false;
+        }, 1200);
+      } catch (e) {
+        e.preventDefault();
+        setGateStatus(e.message);
         els.submitGate.disabled = false;
       }
-    }
+    });
 
     function setStatus(msg) {
       els.status.textContent = msg;
@@ -648,8 +629,6 @@
       renderAllRoutes();
 
       const hits = judge(lat, lng);
-      lastHits = hits;
-
       renderHits(hits, lat, lng);
       renderResults(hits);
       updateSummary(lat, lng, hits, '座標指定');
@@ -671,8 +650,6 @@
       els.lng.value = lng;
 
       const hits = judge(lat, lng);
-      lastHits = hits;
-
       renderHits(hits, lat, lng);
       renderResults(hits);
 
@@ -680,14 +657,6 @@
       updateSummary(lat, lng, hits, display);
       setStatus('判定完了');
     }
-
-    els.submitGate.addEventListener('click', async () => {
-      try {
-        await submitGateForm();
-      } catch (e) {
-        setGateStatus(e.message || '送信できませんでした。');
-      }
-    });
 
     els.searchByCoords.addEventListener('click', async () => {
       try {
@@ -720,7 +689,6 @@
 
     els.clearMap.addEventListener('click', () => {
       clearHitLayers();
-      lastHits = [];
       els.resultsList.innerHTML = '<div class="mini">まだ結果はありません。</div>';
       setSummary('まだ判定していません。', false);
       setStatus('クリアしました。');
