@@ -550,15 +550,67 @@
       return routeGeojson;
     }
 
-    function normalizeProps(p = {}) {
-      return {
-        masterId: p.masterid || p.masterId || '',
-        routeNo: p.routeno || p.routeNo || '',
-        displayName: p.displayname || p.displayName || p.officialroutename || p.officialRouteName || p.commonname || p.commonName || '',
-        geometryType: (p.geometrytype || p.geometryType || '').toUpperCase(),
-        bufferM: p.bufferm || p.bufferM || ''
-      };
+    function normalizeProps(p){
+  const src = p || {};
+
+  const pick = (...vals) => {
+    for (const v of vals) {
+      if (v === null || v === undefined) continue;
+      const s = String(v).replace(/\s+/g, ' ').trim();
+      if (s !== '') return s;
     }
+    return '';
+  };
+
+  const masterId = pick(
+    src.masterid,
+    src.masterId,
+    src.master_id,
+    src.MASTERID
+  );
+
+  const routeNo = pick(
+    src.routeno,
+    src.routeNo,
+    src.route_no,
+    src.ROUTENO,
+    masterId.match(/-(\d+)-/)?.[1]
+  );
+
+  const displayName = pick(
+    src.official_route_name,
+    src.officialroutename,
+    src.officialRouteName,
+    src.display_name,
+    src.displayname,
+    src.displayName,
+    src.common_name,
+    src.commonname,
+    src.commonName,
+    routeNo ? `路線 ${routeNo}` : '',
+    masterId
+  );
+
+  const geometryType = pick(
+    src.geometrytype,
+    src.geometryType,
+    src.geometry_type
+  ).toUpperCase();
+
+  const bufferM = pick(
+    src.bufferm,
+    src.bufferM,
+    src.buffer_m
+  );
+
+  return {
+    masterId: masterId || (routeNo ? `ROUTE-${routeNo}` : ''),
+    routeNo,
+    displayName: displayName || '路線名未設定',
+    geometryType,
+    bufferM
+  };
+}
 
     function styleForFeature(feature, hit = false) {
       const p = normalizeProps(feature.properties);
@@ -643,35 +695,40 @@
       });
     }
 
-    function renderResults(hits) {
-      if (!hits.length) {
-        els.resultsList.innerHTML = '<div class="mini">一致した路線はありません。</div>';
-        return;
-      }
+    function renderResults(hits){
+  if(!hits.length){
+    els.resultsList.innerHTML = '<div class="mini">一致する配置路線は見つかりませんでした。</div>';
+    return;
+  }
 
-      els.resultsList.innerHTML = hits.map((f, i) => {
-        const p = normalizeProps(f.properties);
-        const gt = (f.geometry?.type || p.geometryType || '').toUpperCase();
-        const bufferText = p.bufferM ? `${p.bufferM}m` : '-';
-        return `
-          <div class="result-item">
-            <strong>${i + 1}. ${p.masterId || 'NO-ID'}</strong>
-            ${p.displayName || '-'}<br>
-            ${gt} / Buffer ${bufferText}
-          </div>
-        `;
-      }).join('');
-    }
+  els.resultsList.innerHTML = hits.map((f, i) => {
+    const p = normalizeProps(f.properties || {});
+    const gt = (f.geometry?.type || p.geometryType || '').toUpperCase();
+    const bufferText = p.bufferM ? ` / Buffer ${p.bufferM}m` : '';
+    return `<div class="result-item">
+      <strong>${i + 1}. ${p.displayName}</strong>
+      管理ID: ${p.masterId}<br>
+      ${gt}${bufferText}
+    </div>`;
+  }).join('');
+}
 
-    function updateSummary(lat, lng, hits, sourceLabel) {
-      if (hits.length) {
-        const first = normalizeProps(hits[0].properties);
-        const bufferText = first.bufferM ? `${first.bufferM}m` : '-';
-        setSummary(`${sourceLabel}\n緯度経度: ${lat}, ${lng}\n一致件数: ${hits.length}\n先頭路線: ${first.masterId || 'NO-ID'}\nBuffer: ${bufferText}`, true);
-      } else {
-        setSummary(`${sourceLabel}\n緯度経度: ${lat}, ${lng}\n一致件数: 0`, false);
-      }
-    }
+    function updateSummary(lat, lng, hits, sourceLabel){
+  if(hits.length){
+    const first = normalizeProps(hits[0].properties || {});
+    const bufferText = first.bufferM ? `\nBuffer: ${first.bufferM}m` : '';
+    setSummary(
+      `${sourceLabel}
+判定座標: ${lat}, ${lng}
+一致件数: ${hits.length}件
+先頭路線: ${first.displayName}
+管理ID: ${first.masterId}${bufferText}`,
+      true
+    );
+  } else {
+    setSummary(`${sourceLabel}\n判定座標: ${lat}, ${lng}\n一致件数: 0件`, false);
+  }
+}
 
     function parseCoords() {
       const lat = Number(els.lat.value.trim());
@@ -724,40 +781,48 @@
     }
 
     async function runByCoords() {
-      const { lat, lng } = parseCoords();
-      setStatus('GeoJSON 読み込み中…');
-      await loadGeojson();
-      renderAllRoutes();
+  const { lat, lng } = parseCoords();
+  setStatus('GeoJSON 読み込み中…');
+  await loadGeojson();
+  renderAllRoutes();
 
-      const hits = judge(lat, lng);
-      renderHits(hits, lat, lng);
-      renderResults(hits);
-      updateSummary(lat, lng, hits, '座標指定');
-      setStatus('判定完了');
-    }
+  const hits = judge(lat, lng);
+  console.log('HITS RAW', hits);
+  console.log('HITS PROPS', hits.map(f => f.properties));
+  console.log('HITS NORMALIZED', hits.map(f => normalizeProps(f.properties || {})));
+
+  renderHits(hits, lat, lng);
+  renderResults(hits);
+  updateSummary(lat, lng, hits, '座標指定');
+  setStatus('判定完了');
+}
 
     async function runByAddress() {
-      const address = els.address.value.trim();
-      if (!address) throw new Error('住所を入力してください。');
+  const address = els.address.value.trim();
+  if (!address) throw new Error('住所を入力してください。');
 
-      setStatus('GeoJSON 読み込み中…');
-      await loadGeojson();
-      renderAllRoutes();
+  setStatus('GeoJSON 読み込み中…');
+  await loadGeojson();
+  renderAllRoutes();
 
-      const feature = await geocodeAddressYahoo(address);
-      const { lat, lng } = parseYahooCoordinates(feature);
+  const feature = await geocodeAddressYahoo(address);
+  const { lat, lng } = parseYahooCoordinates(feature);
 
-      els.lat.value = lat;
-      els.lng.value = lng;
+  els.lat.value = lat;
+  els.lng.value = lng;
 
-      const hits = judge(lat, lng);
-      renderHits(hits, lat, lng);
-      renderResults(hits);
+  const hits = judge(lat, lng);
+  console.log('HITS RAW', hits);
+  console.log('HITS PROPS', hits.map(f => f.properties));
+  console.log('HITS NORMALIZED', hits.map(f => normalizeProps(f.properties || {})));
 
-      const display = feature?.Property?.Address || feature?.Name || address;
-      updateSummary(lat, lng, hits, display);
-      setStatus('判定完了');
-    }
+  renderHits(hits, lat, lng);
+  renderResults(hits);
+
+  const display = feature?.Property?.Address || feature?.Name || address;
+  updateSummary(lat, lng, hits, display);
+  setStatus('判定完了');
+}
 
     els.searchByCoords.addEventListener('click', async () => {
       try {
