@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>全配置路線 検索・判定アプリ</title>
+  <title>全配置路線 検索・判定アプリ［参考版］</title>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -241,8 +241,8 @@
 <body>
   <div class="app">
     <aside class="sidebar">
-      <h1>全配置路線 検索・判定アプリ</h1>
-      <p class="lead">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
+      <h1>全配置路線 検索・判定アプリ［参考版］</h1>
+      <p id="leadText" class="lead">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
 
       <div id="gateCard" class="card">
         <strong>利用申請</strong>
@@ -316,14 +316,18 @@
           <div id="summary" class="result ng">まだ判定していません。</div>
         </div>
 
-                <div class="card">
+        <div class="card">
+          <strong>一致した路線</strong>
+          <div id="resultsList" class="results-list"><div class="mini">まだ結果はありません。</div></div>
+        </div>
+
+        <div class="card">
           <strong>データ情報</strong>
           <div class="chips">
             <span class="chip">100m バッファ判定</span>
             <span class="chip">住所検索対応</span>
             <span class="chip">座標入力対応</span>
           </div>
-          <p class="mini">GeoJSON: <code>./routes_from_geojson5_100m.geojson</code></p>
         </div>
 
         <div class="card">
@@ -397,11 +401,6 @@
           <iframe name="contact_iframe" style="display:none;width:0;height:0;border:0;"></iframe>
           <div id="contactStatus" class="status">内容を入力して送信してください。</div>
         </div>
-
-                <div class="card">
-          <strong>一致した路線</strong>
-          <div id="resultsList" class="results-list"><div class="mini">まだ結果はありません。</div></div>
-        </div>
       </div>
     </aside>
 
@@ -438,35 +437,36 @@
     map.setView([35.68, 139.76], 11);
 
     const els = {
-  gateForm: document.getElementById('gateForm'),
-  gateCard: document.getElementById('gateCard'),
-  gateStatus: document.getElementById('gateStatus'),
-  appBody: document.getElementById('appBody'),
-  submitGate: document.getElementById('submitGate'),
-  pageField: document.getElementById('pageField'),
-  userAgentField: document.getElementById('userAgentField'),
+      gateForm: document.getElementById('gateForm'),
+      gateCard: document.getElementById('gateCard'),
+      gateStatus: document.getElementById('gateStatus'),
+      appBody: document.getElementById('appBody'),
+      submitGate: document.getElementById('submitGate'),
+      pageField: document.getElementById('pageField'),
+      userAgentField: document.getElementById('userAgentField'),
+      leadText: document.getElementById('leadText'),
 
-  address: document.getElementById('address'),
-  lat: document.getElementById('lat'),
-  lng: document.getElementById('lng'),
-  status: document.getElementById('status'),
-  summary: document.getElementById('summary'),
-  resultsList: document.getElementById('resultsList'),
-  searchByAddress: document.getElementById('searchByAddress'),
-  searchByCoords: document.getElementById('searchByCoords'),
-  showAll: document.getElementById('showAll'),
-  clearMap: document.getElementById('clearMap'),
+      address: document.getElementById('address'),
+      lat: document.getElementById('lat'),
+      lng: document.getElementById('lng'),
+      status: document.getElementById('status'),
+      summary: document.getElementById('summary'),
+      resultsList: document.getElementById('resultsList'),
+      searchByAddress: document.getElementById('searchByAddress'),
+      searchByCoords: document.getElementById('searchByCoords'),
+      showAll: document.getElementById('showAll'),
+      clearMap: document.getElementById('clearMap'),
 
-  contactForm: document.getElementById('contactForm'),
-  contactType: document.getElementById('contactType'),
-  contactName: document.getElementById('contactName'),
-  contactEmail: document.getElementById('contactEmail'),
-  contactMessage: document.getElementById('contactMessage'),
-  contactSubmit: document.getElementById('contactSubmit'),
-  contactStatus: document.getElementById('contactStatus'),
-  contactPage: document.getElementById('contactPage'),
-  contactUserAgent: document.getElementById('contactUserAgent'),
-};
+      contactForm: document.getElementById('contactForm'),
+      contactType: document.getElementById('contactType'),
+      contactName: document.getElementById('contactName'),
+      contactEmail: document.getElementById('contactEmail'),
+      contactMessage: document.getElementById('contactMessage'),
+      contactSubmit: document.getElementById('contactSubmit'),
+      contactStatus: document.getElementById('contactStatus'),
+      contactPage: document.getElementById('contactPage'),
+      contactUserAgent: document.getElementById('contactUserAgent'),
+    };
 
     function setGateStatus(msg, ok = false) {
       els.gateStatus.className = ok ? 'result ok' : 'status';
@@ -476,6 +476,7 @@
     function unlockApp() {
       els.gateCard.classList.add('hidden');
       els.appBody.classList.remove('hidden');
+      els.leadText.textContent = '住所または緯度経度を入力すると、全配置路線に対して判定します。読み込むデータは100mバッファ版です。参考用のアプリですので、必ず地図を見てご自身で最終確認してください。';
       init();
     }
 
@@ -496,50 +497,51 @@
     }
 
     els.gateForm.addEventListener('submit', function(e) {
-  try {
-    validateGateForm();
-    els.pageField.value = location.href;
-    els.userAgentField.value = navigator.userAgent;
-    els.submitGate.disabled = true;
-    setGateStatus('送信中です…');
+      try {
+        validateGateForm();
+        els.pageField.value = location.href;
+        els.userAgentField.value = navigator.userAgent;
+        els.submitGate.disabled = true;
+        setGateStatus('送信中です…');
 
-    setTimeout(() => {
-      setGateStatus('送信を受け付けました。検索・判定機能を表示します。', true);
-      unlockApp();
-      els.submitGate.disabled = false;
-    }, 1200);
-  } catch (err) {
-    e.preventDefault();
-    setGateStatus(err.message);
-    els.submitGate.disabled = false;
-  }
-});
+        setTimeout(() => {
+          setGateStatus('送信を受け付けました。検索・判定機能を表示します。', true);
+          unlockApp();
+          els.submitGate.disabled = false;
+        }, 1200);
+      } catch (err) {
+        e.preventDefault();
+        setGateStatus(err.message);
+        els.submitGate.disabled = false;
+      }
+    });
 
     function setStatus(msg) {
-  els.status.textContent = msg;
-}
+      els.status.textContent = msg;
+    }
 
-function setSummary(msg, ok) {
-  els.summary.className = `result ${ok ? 'ok' : 'ng'}`;
-  els.summary.textContent = msg;
-}
+    function setSummary(msg, ok) {
+      els.summary.className = `result ${ok ? 'ok' : 'ng'}`;
+      els.summary.textContent = msg;
+    }
 
-function setContactStatus(msg, ok) {
-  els.contactStatus.className = `result ${ok ? 'ok' : 'ng'}`;
-  els.contactStatus.textContent = msg;
-}
+    function setContactStatus(msg, ok) {
+      els.contactStatus.className = `result ${ok ? 'ok' : 'ng'}`;
+      els.contactStatus.textContent = msg;
+    }
 
-function validateContactForm() {
-  const type = els.contactType.value.trim();
-  const name = els.contactName.value.trim();
-  const email = els.contactEmail.value.trim();
-  const message = els.contactMessage.value.trim();
+    function validateContactForm() {
+      const type = els.contactType.value.trim();
+      const name = els.contactName.value.trim();
+      const email = els.contactEmail.value.trim();
+      const message = els.contactMessage.value.trim();
 
-  if (!type) throw new Error('問い合わせ種別を選択してください。');
-  if (!name) throw new Error('氏名を入力してください。');
-  if (!email) throw new Error('メールアドレスを入力してください。');
-  if (!message) throw new Error('内容を入力してください。');
-}
+      if (!type) throw new Error('問い合わせ種別を選択してください。');
+      if (!name) throw new Error('氏名を入力してください。');
+      if (!email) throw new Error('メールアドレスを入力してください。');
+      if (!message) throw new Error('内容を入力してください。');
+    }
+
     async function loadGeojson() {
       if (routeGeojson) return routeGeojson;
       const res = await fetch(GEOJSON_FILE);
@@ -786,33 +788,33 @@ function validateContactForm() {
       }
     });
 
-els.clearMap.addEventListener('click', () => {
-  clearHitLayers();
-  els.resultsList.innerHTML = '<div class="mini">まだ結果はありません。</div>';
-  setSummary('まだ判定していません。', false);
-  setStatus('クリアしました。');
-  if (allLayer) map.fitBounds(allLayer.getBounds().pad(0.05));
-});
+    els.clearMap.addEventListener('click', () => {
+      clearHitLayers();
+      els.resultsList.innerHTML = '<div class="mini">まだ結果はありません。</div>';
+      setSummary('まだ判定していません。', false);
+      setStatus('クリアしました。');
+      if (allLayer) map.fitBounds(allLayer.getBounds().pad(0.05));
+    });
 
-  els.contactForm.addEventListener('submit', (e) => {
-  try {
-    validateContactForm();
-    els.contactPage.value = location.href;
-    els.contactUserAgent.value = navigator.userAgent;
-    els.contactSubmit.disabled = true;
-    setContactStatus('送信中です...', true);
+    els.contactForm.addEventListener('submit', (e) => {
+      try {
+        validateContactForm();
+        els.contactPage.value = location.href;
+        els.contactUserAgent.value = navigator.userAgent;
+        els.contactSubmit.disabled = true;
+        setContactStatus('送信中です...', true);
 
-    setTimeout(() => {
-      setContactStatus('お問い合わせを受け付けました。内容を確認のうえ対応します。', true);
-      els.contactSubmit.disabled = false;
-      els.contactForm.reset();
-    }, 1200);
-  } catch (err) {
-    e.preventDefault();
-    setContactStatus(err.message, false);
-    els.contactSubmit.disabled = false;
-  }
-});
+        setTimeout(() => {
+          setContactStatus('お問い合わせを受け付けました。内容を確認のうえ対応します。', true);
+          els.contactSubmit.disabled = false;
+          els.contactForm.reset();
+        }, 1200);
+      } catch (err) {
+        e.preventDefault();
+        setContactStatus(err.message, false);
+        els.contactSubmit.disabled = false;
+      }
+    });
 
     async function init() {
       try {
