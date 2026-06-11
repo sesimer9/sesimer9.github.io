@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>交通誘導検定者配置路線 検索・判定アプリ［参考版］</title>
-　<h1>交通誘導検定者配置路線 検索・判定アプリ［参考版］</h1>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -37,6 +36,13 @@
       background:var(--bg);
       color:var(--text);
     }
+
+    h1{
+      font-size:1.5rem;
+      line-height:1.25;
+      margin:0 0 10px;
+    }
+
     .app{
       display:grid;
       grid-template-columns:420px 1fr;
@@ -245,7 +251,8 @@
 <body>
   <div class="app">
     <aside class="sidebar">
-      <p id="leadText" class="lead">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
+  <h1>交通誘導検定者配置路線 検索・判定アプリ［参考版］</h1>
+  <p id="leadText" class="lead">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
 
       <div id="gateCard" class="card">
         <strong>利用申請</strong>
@@ -293,9 +300,9 @@
         <div class="card">
           <div class="grid1">
             <div>
-              <label for="address">住所検索</label>
-              <input id="address" type="text" placeholder="例：江東区新砂1-6-35" value="江東区新砂1-6-35" />
-            </div>
+  <label for="address">住所・駅名・施設名検索</label>
+  <input id="address" type="text" placeholder="例：江東区新砂1-6-35 / 高井戸駅 / 東京ビッグサイト" value="江東区新砂1-6-35" />
+</div>
             <div class="grid2">
               <div>
                 <label for="lat">緯度</label>
@@ -307,13 +314,13 @@
               </div>
             </div>
             <div class="row">
-              <button id="searchByAddress">住所で判定</button>
-              <button id="searchByCoords" class="secondary">座標で判定</button>
-            </div>
+  <button id="searchByAddress" type="button">住所で判定</button>
+  <button id="searchByCoords" type="button" class="secondary">座標で判定</button>
+</div>
             <div class="toolbar">
-              <button id="showAll" class="secondary">交通誘導検定者配置路線を表示</button>
-              <button id="clearMap" class="secondary">結果クリア</button>
-            </div>
+  <button id="showAll" type="button" class="secondary">交通誘導検定者配置路線を表示</button>
+  <button id="clearMap" type="button" class="secondary">結果クリア</button>
+</div>
           </div>
           <div id="status" class="status">GeoJSON 読み込み待機中…</div>
           <div id="summary" class="result ng">まだ判定していません。</div>
@@ -401,8 +408,29 @@
             </div>
           </form>
 
-          <iframe name="contact_iframe" style="display:none;width:0;height:0;border:0;"></iframe>
-          <div id="contactStatus" class="status">内容を入力して送信してください。</div>
+<iframe name="contact_iframe" style="display:none;width:0;height:0;border:0;"></iframe>
+
+<form
+  id="searchLogForm"
+  action="https://script.google.com/macros/s/AKfycbwB_V8yT-oPls9z7wifzcg3dmTcAHGr8ZLqqrxaXZ_bP3d4MgQZXjiBSzGYtp0tjfis/exec"
+  method="POST"
+  target="searchlog_iframe"
+>
+  <input type="hidden" id="logKeyword" name="keyword" value="">
+  <input type="hidden" id="logDeviceType" name="deviceType" value="">
+  <input type="hidden" id="logUserAgent" name="userAgent" value="">
+  <input type="hidden" id="logIp" name="ip" value="">
+  <input type="hidden" id="logLat" name="lat" value="">
+  <input type="hidden" id="logLng" name="lng" value="">
+  <input type="hidden" id="logHitCount" name="hitCount" value="">
+  <input type="hidden" id="logResultLabel" name="resultLabel" value="">
+  <input type="hidden" id="logPage" name="page" value="">
+</form>
+
+<iframe name="searchlog_iframe" class="hidden-frame"></iframe>
+
+<div id="contactStatus" class="status">内容を入力して送信してください。</div>
+
         </div>
       </div>
     </aside>
@@ -416,6 +444,7 @@
   <script>
     const YAHOO_APP_ID = 'dmVyPTIwMjUwNyZpZD1QMDdkaFFITFh1Jmhhc2g9TVRKaE0yVXhNVGhsWVdFMlpqQXhPUQ';
     const GEOJSON_FILE = './routes_from_geojson5_100m.geojson';
+    
 
     let routeGeojson = null;
     let allLayer = null;
@@ -464,6 +493,17 @@
       contactStatus: document.getElementById('contactStatus'),
       contactPage: document.getElementById('contactPage'),
       contactUserAgent: document.getElementById('contactUserAgent'),
+
+      searchLogForm: document.getElementById('searchLogForm'),
+logKeyword: document.getElementById('logKeyword'),
+logDeviceType: document.getElementById('logDeviceType'),
+logUserAgent: document.getElementById('logUserAgent'),
+logIp: document.getElementById('logIp'),
+logLat: document.getElementById('logLat'),
+logLng: document.getElementById('logLng'),
+logHitCount: document.getElementById('logHitCount'),
+logResultLabel: document.getElementById('logResultLabel'),
+logPage: document.getElementById('logPage'),
     };
 
     function setGateStatus(msg, ok = false) {
@@ -779,6 +819,96 @@
       return { lat, lng };
     }
 
+   function searchPlaceYahoo(keyword) {
+  return new Promise((resolve, reject) => {
+    const cb = 'yahooLocalSearchCallback_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    const script = document.createElement('script');
+
+    window[cb] = data => {
+      cleanup();
+
+      const features = data?.Feature || [];
+      const first = Array.isArray(features) ? features[0] : null;
+
+      if (!first) {
+        return reject(new Error('駅名・施設名から場所を特定できませんでした。'));
+      }
+
+      resolve(first);
+    };
+
+    function cleanup() {
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window[cb];
+    }
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('駅名・施設名検索の取得に失敗しました。'));
+    };
+
+    script.src =
+      `https://map.yahooapis.jp/search/local/V1/localSearch?appid=${encodeURIComponent(YAHOO_APP_ID)}&query=${encodeURIComponent(keyword)}&results=1&output=json&callback=${encodeURIComponent(cb)}`;
+
+    document.body.appendChild(script);
+  });
+}
+
+function parseYahooPlaceCoordinates(feature) {
+  const coordinates = feature?.Geometry?.Coordinates;
+  if (!coordinates) throw new Error('場所の座標が取得できませんでした。');
+
+  const parts = coordinates.split(',');
+  if (parts.length !== 2) throw new Error('場所の座標形式が不正です。');
+
+  const lng = Number(parts[0]);
+  const lat = Number(parts[1]);
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    throw new Error('場所の座標変換に失敗しました。');
+  }
+
+  return { lat, lng };
+}
+
+function getDeviceType() {
+  const ua = navigator.userAgent || '';
+  if (/iPhone|Android.+Mobile|Windows Phone/i.test(ua)) return 'mobile';
+  if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
+  return 'pc';
+}
+
+async function fetchClientIp() {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data.ip || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+async function saveSearchLog({ keyword, lat, lng, hitCount, resultLabel }) {
+  try {
+    const ip = await fetchClientIp();
+
+    els.logKeyword.value = keyword || '';
+    els.logDeviceType.value = getDeviceType();
+    els.logUserAgent.value = navigator.userAgent || '';
+    els.logIp.value = ip || '';
+    els.logLat.value = String(lat ?? '');
+    els.logLng.value = String(lng ?? '');
+    els.logHitCount.value = String(hitCount ?? '');
+    els.logResultLabel.value = resultLabel || '';
+    els.logPage.value = location.href;
+
+    els.searchLogForm.submit();
+  } catch (e) {
+    console.warn('検索ログ保存失敗', e);
+  }
+}
+
     async function runByCoords() {
   const { lat, lng } = parseCoords();
   setStatus('GeoJSON 読み込み中…');
@@ -791,18 +921,35 @@
   renderResults(hits);
   updateSummary(lat, lng, hits, '座標指定');
   setStatus('判定完了');
+
+  await saveSearchLog({
+    keyword: `${lat},${lng}`,
+    lat,
+    lng,
+    hitCount: hits.length,
+    resultLabel: '座標指定'
+  });
 }
 
     async function runByAddress() {
-  const address = els.address.value.trim();
-  if (!address) throw new Error('住所を入力してください。');
+  const keyword = els.address.value.trim();
+  if (!keyword) throw new Error('住所・駅名・施設名を入力してください。');
 
   setStatus('GeoJSON 読み込み中…');
   await loadGeojson();
   renderAllRoutes();
 
-  const feature = await geocodeAddressYahoo(address);
-  const { lat, lng } = parseYahooCoordinates(feature);
+  let lat, lng, display;
+
+  try {
+    const feature = await geocodeAddressYahoo(keyword);
+    ({ lat, lng } = parseYahooCoordinates(feature));
+    display = feature?.Property?.Address || feature?.Name || keyword;
+  } catch (addressErr) {
+    const placeFeature = await searchPlaceYahoo(keyword);
+    ({ lat, lng } = parseYahooPlaceCoordinates(placeFeature));
+    display = placeFeature?.Name || keyword;
+  }
 
   els.lat.value = lat;
   els.lng.value = lng;
@@ -811,10 +958,16 @@
 
   renderHits(hits, lat, lng);
   renderResults(hits);
-
-  const display = feature?.Property?.Address || feature?.Name || address;
   updateSummary(lat, lng, hits, display);
   setStatus('判定完了');
+
+  await saveSearchLog({
+    keyword,
+    lat,
+    lng,
+    hitCount: hits.length,
+    resultLabel: display
+  });
 }
 
     els.searchByCoords.addEventListener('click', async () => {
