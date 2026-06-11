@@ -316,6 +316,7 @@
             <div class="row">
   <button id="searchByAddress" type="button">住所で判定</button>
   <button id="searchByCoords" type="button" class="secondary">座標で判定</button>
+  <button id="searchByCurrent" type="button" class="secondary">現在地で判定</button>
 </div>
             <div class="toolbar">
   <button id="showAll" type="button" class="secondary">交通誘導検定者配置路線を表示</button>
@@ -481,6 +482,7 @@
       resultsList: document.getElementById('resultsList'),
       searchByAddress: document.getElementById('searchByAddress'),
       searchByCoords: document.getElementById('searchByCoords'),
+      searchByCurrent: document.getElementById('searchByCurrent'),
       showAll: document.getElementById('showAll'),
       clearMap: document.getElementById('clearMap'),
 
@@ -909,6 +911,69 @@ async function saveSearchLog({ keyword, lat, lng, hitCount, resultLabel }) {
   }
 }
 
+function getCurrentPositionAsync() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('このブラウザは現在地取得に対応していません。'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
+      },
+      error => {
+        if (error.code === 1) {
+          reject(new Error('現在地の利用が許可されませんでした。'));
+        } else if (error.code === 2) {
+          reject(new Error('現在地を取得できませんでした。'));
+        } else if (error.code === 3) {
+          reject(new Error('現在地取得がタイムアウトしました。'));
+        } else {
+          reject(new Error('現在地取得中にエラーが発生しました。'));
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  });
+}
+
+async function runByCurrentLocation() {
+  setStatus('現在地を取得しています…');
+
+  const { lat, lng, accuracy } = await getCurrentPositionAsync();
+
+  els.lat.value = lat;
+  els.lng.value = lng;
+
+  setStatus('GeoJSON 読み込み中…');
+  await loadGeojson();
+  renderAllRoutes();
+
+  const hits = judge(lat, lng);
+
+  renderHits(hits, lat, lng);
+  renderResults(hits);
+  updateSummary(lat, lng, hits, `現在地判定（精度 約${Math.round(accuracy)}m）`);
+  setStatus('判定完了');
+
+  await saveSearchLog({
+    keyword: 'CURRENT_LOCATION',
+    lat,
+    lng,
+    hitCount: hits.length,
+    resultLabel: `現在地判定（精度 約${Math.round(accuracy)}m）`
+  });
+}
+
     async function runByCoords() {
   const { lat, lng } = parseCoords();
   setStatus('GeoJSON 読み込み中…');
@@ -987,6 +1052,15 @@ async function saveSearchLog({ keyword, lat, lng, hitCount, resultLabel }) {
         setStatus('エラー');
       }
     });
+
+     els.searchByCurrent.addEventListener('click', async () => {
+  try {
+    await runByCurrentLocation();
+  } catch (e) {
+    setSummary(e.message, false);
+    setStatus('エラー');
+  }
+});
 
     els.showAll.addEventListener('click', async () => {
   try {
