@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://maps.gsi.go.jp/js/muni.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <style>
     :root{
@@ -254,49 +255,51 @@
   <h1>交通誘導検定者配置路線 検索・判定アプリ［参考版］</h1>
   <p id="leadText" class="lead">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
 
-      <div id="gateCard" class="card">
-        <strong>利用申請</strong>
-
-        <form
-          id="gateForm"
-          action="https://script.google.com/macros/s/AKfycbzDr5yPZsP7FG6hTqkfIiYEWYN5uMzBVWHxWLE36OCLfypzDx_RLB8BxQuJNZjKxbmu/exec"
-          method="POST"
-          target="hidden_iframe"
-        >
-          <div class="grid1" style="margin-top:12px;">
-            <div>
-              <label for="company">会社名<span class="required">※必須</span></label>
-              <input id="company" name="company" type="text" placeholder="株式会社〇〇" required />
-            </div>
-            <div>
-              <label for="userName">氏名<span class="required">※必須</span></label>
-              <input id="userName" name="name" type="text" placeholder="山田 太郎" required />
-            </div>
-            <div>
-              <label for="userEmail">メールアドレス<span class="required">※必須</span></label>
-              <input id="userEmail" name="email" type="email" placeholder="example@company.co.jp" required />
-            </div>
-            <div>
-              <label for="userPhone">電話番号<span class="required">※必須</span></label>
-              <input id="userPhone" name="phone" type="tel" placeholder="090-1234-5678" required />
-            </div>
-          </div>
-
-          <input type="hidden" id="pageField" name="page" value="" />
-          <input type="hidden" id="userAgentField" name="userAgent" value="" />
-
-          <div class="row" style="margin-top:12px;">
-            <button id="submitGate" type="submit">送信して利用開始</button>
-          </div>
-        </form>
-
-        <iframe name="hidden_iframe" class="hidden-frame"></iframe>
-
-        <div id="gateStatus" class="status">必要事項を入力して送信してください。</div>
-        <p class="mini">送信内容は管理者へ通知されます。送信後、このブラウザ画面内で検索機能を利用できます。</p>
+      <div id="emailCard" class="card">
+  <strong>利用者メール登録</strong>
+  <form id="emailForm"
+        action="https://script.google.com/macros/s/AKfycbzDr5yPZsP7FG6hTqkfIiYEWYN5uMzBVWHxWLE36OCLfypzDxRLB8BxQuJNZjKxbmue/exec"
+        method="POST"
+        target="emailLogIframe">
+    <div class="grid1" style="margin-top:12px;">
+      <div>
+        <label for="userEmail">メールアドレス<span class="required">*</span></label>
+        <input
+          id="userEmail"
+          name="email"
+          type="email"
+          placeholder="example@company.co.jp"
+          autocomplete="email"
+          required
+        />
       </div>
 
-      <div id="appBody" class="hidden">
+      <input type="hidden" id="eventTypeField" name="eventType" value="email_capture">
+      <input type="hidden" id="pageField" name="page" value="">
+      <input type="hidden" id="userAgentField" name="userAgent" value="">
+      <input type="hidden" id="userLatField" name="userLat" value="">
+      <input type="hidden" id="userLngField" name="userLng" value="">
+      <input type="hidden" id="userAccuracyField" name="userAccuracy" value="">
+      <input type="hidden" id="userAddressRawField" name="userAddressRaw" value="">
+      <input type="hidden" id="userAreaLabelField" name="userAreaLabel" value="">
+      <input type="hidden" id="searchTypeField" name="searchType" value="">
+      <input type="hidden" id="keywordField" name="keyword" value="">
+      <input type="hidden" id="searchedLatField" name="searchedLat" value="">
+      <input type="hidden" id="searchedLngField" name="searchedLng" value="">
+      <input type="hidden" id="resultLabelField" name="resultLabel" value="">
+      <input type="hidden" id="hitCountField" name="hitCount" value="">
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <button id="submitEmail" type="submit">メールを登録</button>
+    </div>
+  </form>
+  <iframe name="emailLogIframe" class="hidden-frame"></iframe>
+  <div id="emailStatus" class="status">メール未登録でも判定はできますが、ログには残りません。</div>
+  <p class="mini">一度入力したメールは、使える環境では次回以降自動入力します。</p>
+</div>
+
+      <div id="appBody">
         <div class="card">
           <div class="grid1">
             <div>
@@ -411,24 +414,6 @@
 
 <iframe name="contact_iframe" style="display:none;width:0;height:0;border:0;"></iframe>
 
-<form
-  id="searchLogForm"
-  action="https://script.google.com/macros/s/AKfycbwB_V8yT-oPls9z7wifzcg3dmTcAHGr8ZLqqrxaXZ_bP3d4MgQZXjiBSzGYtp0tjfis/exec"
-  method="POST"
-  target="searchlog_iframe"
->
-  <input type="hidden" id="logKeyword" name="keyword" value="">
-  <input type="hidden" id="logDeviceType" name="deviceType" value="">
-  <input type="hidden" id="logUserAgent" name="userAgent" value="">
-  <input type="hidden" id="logIp" name="ip" value="">
-  <input type="hidden" id="logLat" name="lat" value="">
-  <input type="hidden" id="logLng" name="lng" value="">
-  <input type="hidden" id="logHitCount" name="hitCount" value="">
-  <input type="hidden" id="logResultLabel" name="resultLabel" value="">
-  <input type="hidden" id="logPage" name="page" value="">
-</form>
-
-<iframe name="searchlog_iframe" class="hidden-frame"></iframe>
 
 <div id="contactStatus" class="status">内容を入力して送信してください。</div>
 
@@ -465,97 +450,212 @@
     map.setView([35.68, 139.76], 11);
 
     const els = {
-      gateForm: document.getElementById('gateForm'),
-      gateCard: document.getElementById('gateCard'),
-      gateStatus: document.getElementById('gateStatus'),
-      appBody: document.getElementById('appBody'),
-      submitGate: document.getElementById('submitGate'),
-      pageField: document.getElementById('pageField'),
-      userAgentField: document.getElementById('userAgentField'),
-      leadText: document.getElementById('leadText'),
+  emailForm: document.getElementById('emailForm'),
+  emailStatus: document.getElementById('emailStatus'),
+  submitEmail: document.getElementById('submitEmail'),
+  userEmail: document.getElementById('userEmail'),
 
-      address: document.getElementById('address'),
-      lat: document.getElementById('lat'),
-      lng: document.getElementById('lng'),
-      status: document.getElementById('status'),
-      summary: document.getElementById('summary'),
-      resultsList: document.getElementById('resultsList'),
-      searchByAddress: document.getElementById('searchByAddress'),
-      searchByCoords: document.getElementById('searchByCoords'),
-      searchByCurrent: document.getElementById('searchByCurrent'),
-      showAll: document.getElementById('showAll'),
-      clearMap: document.getElementById('clearMap'),
+  eventTypeField: document.getElementById('eventTypeField'),
+  pageField: document.getElementById('pageField'),
+  userAgentField: document.getElementById('userAgentField'),
+  userLatField: document.getElementById('userLatField'),
+  userLngField: document.getElementById('userLngField'),
+  userAccuracyField: document.getElementById('userAccuracyField'),
+  userAddressRawField: document.getElementById('userAddressRawField'),
+  userAreaLabelField: document.getElementById('userAreaLabelField'),
+  searchTypeField: document.getElementById('searchTypeField'),
+  keywordField: document.getElementById('keywordField'),
+  searchedLatField: document.getElementById('searchedLatField'),
+  searchedLngField: document.getElementById('searchedLngField'),
+  resultLabelField: document.getElementById('resultLabelField'),
+  hitCountField: document.getElementById('hitCountField'),
 
-      contactForm: document.getElementById('contactForm'),
-      contactType: document.getElementById('contactType'),
-      contactName: document.getElementById('contactName'),
-      contactEmail: document.getElementById('contactEmail'),
-      contactMessage: document.getElementById('contactMessage'),
-      contactSubmit: document.getElementById('contactSubmit'),
-      contactStatus: document.getElementById('contactStatus'),
-      contactPage: document.getElementById('contactPage'),
-      contactUserAgent: document.getElementById('contactUserAgent'),
+  leadText: document.getElementById('leadText'),
+  address: document.getElementById('address'),
+  lat: document.getElementById('lat'),
+  lng: document.getElementById('lng'),
+  status: document.getElementById('status'),
+  summary: document.getElementById('summary'),
+  resultsList: document.getElementById('resultsList'),
+  searchByAddress: document.getElementById('searchByAddress'),
+  searchByCoords: document.getElementById('searchByCoords'),
+  searchByCurrent: document.getElementById('searchByCurrent'),
+  showAll: document.getElementById('showAll'),
+  clearMap: document.getElementById('clearMap'),
 
-      searchLogForm: document.getElementById('searchLogForm'),
-logKeyword: document.getElementById('logKeyword'),
-logDeviceType: document.getElementById('logDeviceType'),
-logUserAgent: document.getElementById('logUserAgent'),
-logIp: document.getElementById('logIp'),
-logLat: document.getElementById('logLat'),
-logLng: document.getElementById('logLng'),
-logHitCount: document.getElementById('logHitCount'),
-logResultLabel: document.getElementById('logResultLabel'),
-logPage: document.getElementById('logPage'),
-    };
+  contactForm: document.getElementById('contactForm'),
+  contactType: document.getElementById('contactType'),
+  contactName: document.getElementById('contactName'),
+  contactEmail: document.getElementById('contactEmail'),
+  contactMessage: document.getElementById('contactMessage'),
+  contactSubmit: document.getElementById('contactSubmit'),
+  contactStatus: document.getElementById('contactStatus'),
+  contactPage: document.getElementById('contactPage'),
+  contactUserAgent: document.getElementById('contactUserAgent')
+};
 
-    function setGateStatus(msg, ok = false) {
-      els.gateStatus.className = ok ? 'result ok' : 'status';
-      els.gateStatus.textContent = msg;
-    }
-
-    function unlockApp() {
-  els.gateCard.classList.add('hidden');
-  els.appBody.classList.remove('hidden');
-  els.leadText.textContent =
-    '住所または緯度経度を入力すると、交通誘導検定者配置路線に対して判定します。読み込むデータは100mバッファ版です。参考用のアプリですので、必ず地図を見てご自身で最終確認してください。';
-  init();
+    function setEmailStatus(msg, ok = false) {
+  els.emailStatus.className = ok ? 'result ok' : 'status';
+  els.emailStatus.textContent = msg;
 }
 
-    function validateGateForm() {
-      const company = document.getElementById('company').value.trim();
-      const userName = document.getElementById('userName').value.trim();
-      const userEmail = document.getElementById('userEmail').value.trim();
-      const userPhone = document.getElementById('userPhone').value.trim();
+function getSavedEmail() {
+  try {
+    return localStorage.getItem('savedEmail') || '';
+  } catch (e) {
+    return '';
+  }
+}
 
-      if (!company || !userName || !userEmail || !userPhone) {
-        throw new Error('会社名・氏名・メールアドレス・電話番号をすべて入力してください。');
-      }
+function saveEmailLocally(email) {
+  try {
+    localStorage.setItem('savedEmail', email);
+  } catch (e) {}
+}
 
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail);
-      if (!emailOk) {
-        throw new Error('メールアドレスの形式を確認してください。');
-      }
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function getCurrentPositionAsync() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('このブラウザでは現在地取得に対応していません。'));
+      return;
     }
-
-    els.gateForm.addEventListener('submit', function(e) {
-      try {
-        validateGateForm();
-        els.pageField.value = location.href;
-        els.userAgentField.value = navigator.userAgent;
-        els.submitGate.disabled = true;
-        setGateStatus('送信中です…');
-
-        setTimeout(() => {
-          setGateStatus('送信を受け付けました。検索・判定機能を表示します。', true);
-          unlockApp();
-          els.submitGate.disabled = false;
-        }, 1200);
-      } catch (err) {
-        e.preventDefault();
-        setGateStatus(err.message);
-        els.submitGate.disabled = false;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve(pos),
+      () => reject(new Error('現在地を取得できませんでした。')),
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
       }
-    });
+    );
+  });
+}
+
+async function getUserLocationInfo() {
+  const pos = await getCurrentPositionAsync();
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+  const accuracy = pos.coords.accuracy;
+  let userAddressRaw = '';
+  let userAreaLabel = '';
+
+  try {
+    const gsiData = await reverseGeocodeGsi(lat, lng);
+    userAddressRaw = [gsiData.prefecture, gsiData.city, gsiData.townName]
+      .filter(Boolean)
+      .join('');
+    userAreaLabel = gsiData.areaLabel || userAddressRaw;
+  } catch (e) {}
+
+  return {
+    userLat: lat,
+    userLng: lng,
+    userAccuracy: accuracy,
+    userAddressRaw,
+    userAreaLabel
+  };
+}
+
+function fillCommonLogFields(payload) {
+  els.pageField.value = location.href;
+  els.userAgentField.value = navigator.userAgent;
+  els.userLatField.value = payload.userLat ?? '';
+  els.userLngField.value = payload.userLng ?? '';
+  els.userAccuracyField.value = payload.userAccuracy ?? '';
+  els.userAddressRawField.value = payload.userAddressRaw ?? '';
+  els.userAreaLabelField.value = payload.userAreaLabel ?? '';
+  els.searchTypeField.value = payload.searchType ?? '';
+  els.keywordField.value = payload.keyword ?? '';
+  els.searchedLatField.value = payload.searchedLat ?? '';
+  els.searchedLngField.value = payload.searchedLng ?? '';
+  els.resultLabelField.value = payload.resultLabel ?? '';
+  els.hitCountField.value = payload.hitCount ?? '';
+}
+
+async function postEmailLog(payload) {
+  const formData = new FormData();
+
+  formData.append('email', els.userEmail.value.trim());
+  formData.append('eventType', payload.eventType || 'email_capture');
+  formData.append('page', location.href);
+  formData.append('userAgent', navigator.userAgent);
+  formData.append('userLat', payload.userLat ?? '');
+  formData.append('userLng', payload.userLng ?? '');
+  formData.append('userAccuracy', payload.userAccuracy ?? '');
+  formData.append('userAddressRaw', payload.userAddressRaw ?? '');
+  formData.append('userAreaLabel', payload.userAreaLabel ?? '');
+  formData.append('searchType', payload.searchType ?? '');
+  formData.append('keyword', payload.keyword ?? '');
+  formData.append('searchedLat', payload.searchedLat ?? '');
+  formData.append('searchedLng', payload.searchedLng ?? '');
+  formData.append('resultLabel', payload.resultLabel ?? '');
+  formData.append('hitCount', payload.hitCount ?? '');
+
+  const res = await fetch(els.emailForm.action, {
+    method: 'POST',
+    body: formData,
+    mode: 'no-cors'
+  });
+
+  return res;
+}
+
+async function captureEmailWithLocation() {
+  const email = els.userEmail.value.trim();
+  if (!validateEmail(email)) {
+    throw new Error('メールアドレスを正しく入力してください。');
+  }
+
+  const locationInfo = await getUserLocationInfo();
+  saveEmailLocally(email);
+
+  await postEmailLog({
+  eventType: 'email_capture',
+  ...locationInfo
+});
+
+  setEmailStatus(`登録しました: ${email}`, true);
+}
+
+async function logSearchAction(payload) {
+  const email = els.userEmail.value.trim();
+  if (!validateEmail(email)) return;
+
+  let locationInfo = {
+    userLat: '',
+    userLng: '',
+    userAccuracy: '',
+    userAddressRaw: '',
+    userAreaLabel: ''
+  };
+
+  try {
+    locationInfo = await getUserLocationInfo();
+  } catch (e) {}
+
+  await postEmailLog({
+  eventType: 'search',
+  ...locationInfo,
+  ...payload
+});
+}
+
+els.emailForm.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  try {
+    els.submitEmail.disabled = true;
+    setEmailStatus('現在地を取得して登録しています...');
+    await captureEmailWithLocation();
+  } catch (err) {
+    setEmailStatus(err.message, false);
+  } finally {
+    els.submitEmail.disabled = false;
+  }
+});
 
     function setStatus(msg) {
       els.status.textContent = msg;
@@ -610,12 +710,14 @@ logPage: document.getElementById('logPage'),
     src.MASTERID
   );
 
+  const routeMatch = masterId ? masterId.match(/-(\d+)-/) : null;
+
   const routeNo = pick(
     src.routeno,
     src.routeNo,
     src.route_no,
     src.ROUTENO,
-    masterId.match(/-(\d+)-/)?.[1]
+    routeMatch ? routeMatch[1] : ''
   );
 
   const displayName = pick(
@@ -655,7 +757,7 @@ logPage: document.getElementById('logPage'),
 
     function styleForFeature(feature, hit = false) {
       const p = normalizeProps(feature.properties);
-      const gt = (feature.geometry?.type || p.geometryType || '').toUpperCase();
+      const gt = (((feature.geometry && feature.geometry.type) || p.geometryType || '') + '').toUpperCase();
 
       if (gt.includes('POLYGON')) {
         return {
@@ -676,7 +778,7 @@ logPage: document.getElementById('logPage'),
 
     function popupText(feature) {
       const p = normalizeProps(feature.properties);
-      const gt = feature.geometry?.type || p.geometryType || 'UNKNOWN';
+      const gt = (feature.geometry && feature.geometry.type) || p.geometryType || 'UNKNOWN';
       const bufferText = p.bufferM ? `<br>Buffer: ${p.bufferM}m` : '';
       return `<strong>${p.masterId || 'NO-ID'}</strong><br>${p.displayName || '-'}<br>Geometry: ${gt}${bufferText}`;
     }
@@ -744,7 +846,7 @@ logPage: document.getElementById('logPage'),
 
   els.resultsList.innerHTML = hits.map((f, i) => {
     const p = normalizeProps(f.properties || {});
-    const gt = (f.geometry?.type || p.geometryType || '').toUpperCase();
+    const gt = (((f.geometry && f.geometry.type) || p.geometryType || '') + '').toUpperCase();
     const bufferText = p.bufferM ? ` / Buffer ${p.bufferM}m` : '';
     return `<div class="result-item">
       <strong>${i + 1}. ${p.displayName}</strong>
@@ -787,8 +889,8 @@ logPage: document.getElementById('logPage'),
 
         window[cb] = data => {
           cleanup();
-          const info = data?.ResultInfo;
-          const feature = data?.Feature?.[0];
+          const info = data && data.ResultInfo ? data.ResultInfo : null;
+const feature = data && data.Feature && data.Feature[0] ? data.Feature[0] : null;
           if (!info || info.Status !== 200 || !feature) {
             return reject(new Error('住所を特定できませんでした。'));
           }
@@ -811,7 +913,7 @@ logPage: document.getElementById('logPage'),
     }
 
     function parseYahooCoordinates(feature) {
-      const coordinates = feature?.Geometry?.Coordinates;
+      const coordinates = feature && feature.Geometry ? feature.Geometry.Coordinates : '';
       if (!coordinates) throw new Error('座標が取得できませんでした。');
       const parts = coordinates.split(',');
       if (parts.length !== 2) throw new Error('座標形式が不正です。');
@@ -829,7 +931,7 @@ logPage: document.getElementById('logPage'),
     window[cb] = data => {
       cleanup();
 
-      const features = data?.Feature || [];
+      const features = data && data.Feature ? data.Feature : [];
       const first = Array.isArray(features) ? features[0] : null;
 
       if (!first) {
@@ -857,7 +959,7 @@ logPage: document.getElementById('logPage'),
 }
 
 function parseYahooPlaceCoordinates(feature) {
-  const coordinates = feature?.Geometry?.Coordinates;
+  const coordinates = feature && feature.Geometry ? feature.Geometry.Coordinates : '';
   if (!coordinates) throw new Error('場所の座標が取得できませんでした。');
 
   const parts = coordinates.split(',');
@@ -873,87 +975,178 @@ function parseYahooPlaceCoordinates(feature) {
   return { lat, lng };
 }
 
-function getDeviceType() {
-  const ua = navigator.userAgent || '';
-  if (/iPhone|Android.+Mobile|Windows Phone/i.test(ua)) return 'mobile';
-  if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
-  return 'pc';
+async function runByCoords() {
+const { lat, lng } = parseCoords();
+
+setStatus('GeoJSON を読み込み中...');
+await loadGeojson();
+renderAllRoutes();
+
+const hits = judge(lat, lng);
+renderHits(hits, lat, lng);
+renderResults(hits);
+updateSummary(lat, lng, hits, '座標指定');
+setStatus('判定完了');
+
+await logSearchAction({
+searchType: 'coords',
+keyword: '',
+searchedLat: lat,
+searchedLng: lng,
+resultLabel: '座標指定',
+hitCount: hits.length
+});
 }
 
-async function fetchClientIp() {
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    if (!res.ok) return '';
-    const data = await res.json();
-    return data.ip || '';
-  } catch (e) {
-    return '';
+async function reverseGeocodeGsi(lat, lng) {
+  const url = `https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error('現在地の住所情報を取得できませんでした。');
   }
-}
 
-async function saveSearchLog({ keyword, lat, lng, hitCount, resultLabel }) {
-  try {
-    const ip = await fetchClientIp();
-
-    els.logKeyword.value = keyword || '';
-    els.logDeviceType.value = getDeviceType();
-    els.logUserAgent.value = navigator.userAgent || '';
-    els.logIp.value = ip || '';
-    els.logLat.value = String(lat ?? '');
-    els.logLng.value = String(lng ?? '');
-    els.logHitCount.value = String(hitCount ?? '');
-    els.logResultLabel.value = resultLabel || '';
-    els.logPage.value = location.href;
-
-    els.searchLogForm.submit();
-  } catch (e) {
-    console.warn('検索ログ保存失敗', e);
+  const data = await res.json();
+  const results = data && data.results;
+  if (!results) {
+    throw new Error('現在地の住所情報が見つかりませんでした。');
   }
+
+  const townName = (results.lv01Nm || '').trim();
+  const muniCd = String(results.muniCd || '');
+  const muniKey = String(Number(muniCd));
+  const muniRaw =
+  window.GSI && window.GSI.MUNI_ARRAY && window.GSI.MUNI_ARRAY[muniKey]
+    ? window.GSI.MUNI_ARRAY[muniKey]
+    : '';
+
+  let prefecture = '';
+  let city = '';
+
+  if (muniRaw) {
+    const parts = muniRaw.split(',');
+    prefecture = (parts[1] || '').trim();
+    city = (parts[3] || '').replace(/\s+/g, '');
+  }
+
+  const baseLabel = [prefecture, city, townName].filter(Boolean).join('') || '現在地';
+  const areaLabel = `${baseLabel}付近`;
+
+  return {
+    raw: results,
+    prefecture,
+    city,
+    townName,
+    areaLabel
+  };
 }
 
-function getCurrentPositionAsync() {
+function reverseGeocodeYahoo(lat, lng) {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('このブラウザは現在地取得に対応していません。'));
-      return;
+    const cb = 'yahooReverseGeoCallback_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    const script = document.createElement('script');
+
+    window[cb] = data => {
+      cleanup();
+
+      const feature = data && data.Feature && data.Feature[0] ? data.Feature[0] : null;
+      if (!feature) {
+        return reject(new Error('現在地の住所を取得できませんでした。'));
+      }
+
+      const property = feature.Property || {};
+      const elements = Array.isArray(property.AddressElement) ? property.AddressElement : [];
+
+      let prefecture = '';
+let city = '';
+let town = '';
+let chome = '';
+
+for (let i = 0; i < elements.length; i++) {
+  const el = elements[i] || {};
+  const name = (el.Name || '').trim();
+  const level = String(el.Level || '').trim().toLowerCase();
+
+  if (!name) continue;
+
+  if (level === 'prefecture' && !prefecture) {
+    prefecture = name;
+  } else if (level === 'city' && !city) {
+    city = name;
+  } else if ((level === 'oaza' || level === 'aza') && !town) {
+    town = name;
+  } else if (
+  (level === 'detail1' || level === 'chome' || level === 'block' || level === 'go' || level === 'kyoten') &&
+  !chome
+) {
+  chome = name;
+}
+}
+
+      const builtAddress = [prefecture, city, town, chome].filter(Boolean).join('');
+      const address = builtAddress || property.Address || feature.Name || '';
+
+      if (!address) {
+        return reject(new Error('現在地の住所文字列を取得できませんでした。'));
+      }
+
+      resolve({
+        raw: feature,
+        address: address
+      });
+    };
+
+    function cleanup() {
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window[cb];
     }
 
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy
-        });
-      },
-      error => {
-        if (error.code === 1) {
-          reject(new Error('現在地の利用が許可されませんでした。'));
-        } else if (error.code === 2) {
-          reject(new Error('現在地を取得できませんでした。'));
-        } else if (error.code === 3) {
-          reject(new Error('現在地取得がタイムアウトしました。'));
-        } else {
-          reject(new Error('現在地取得中にエラーが発生しました。'));
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('Yahoo!リバースジオコーダの取得に失敗しました。'));
+    };
+
+    script.src =
+      'https://map.yahooapis.jp/geoapi/V1/reverseGeoCoder'
+      + '?appid=' + encodeURIComponent(YAHOO_APP_ID)
+      + '&lat=' + encodeURIComponent(lat)
+      + '&lon=' + encodeURIComponent(lng)
+      + '&output=json'
+      + '&callback=' + encodeURIComponent(cb);
+
+    document.body.appendChild(script);
   });
 }
 
 async function runByCurrentLocation() {
   setStatus('現在地を取得しています…');
 
-  const { lat, lng, accuracy } = await getCurrentPositionAsync();
+  const currentPos = await getCurrentPositionAsync();
+const lat = currentPos.coords.latitude;
+const lng = currentPos.coords.longitude;
+const accuracy = currentPos.coords.accuracy;
 
   els.lat.value = lat;
   els.lng.value = lng;
 
+  let areaLabel = `現在地判定（精度 約${Math.round(accuracy)}m）`;
+
+  try {
+    const yahooRev = await reverseGeocodeYahoo(lat, lng);
+    if (yahooRev.address) {
+      areaLabel = `${yahooRev.address}付近（現在地判定／精度 約${Math.round(accuracy)}m）`;
+    }
+  } catch (yahooErr) {
+    try {
+      const rev = await reverseGeocodeGsi(lat, lng);
+      if (rev.areaLabel) {
+        areaLabel = `${rev.areaLabel}（現在地判定／精度 約${Math.round(accuracy)}m）`;
+      }
+    } catch (gsiErr) {
+      console.warn('現在地の住所情報取得に失敗:', gsiErr);
+    }
+  }
+
   setStatus('GeoJSON 読み込み中…');
   await loadGeojson();
   renderAllRoutes();
@@ -962,37 +1155,16 @@ async function runByCurrentLocation() {
 
   renderHits(hits, lat, lng);
   renderResults(hits);
-  updateSummary(lat, lng, hits, `現在地判定（精度 約${Math.round(accuracy)}m）`);
+  updateSummary(lat, lng, hits, areaLabel);
   setStatus('判定完了');
 
-  await saveSearchLog({
+    await logSearchAction({
+    searchType: 'current',
     keyword: 'CURRENT_LOCATION',
-    lat,
-    lng,
-    hitCount: hits.length,
-    resultLabel: `現在地判定（精度 約${Math.round(accuracy)}m）`
-  });
-}
-
-    async function runByCoords() {
-  const { lat, lng } = parseCoords();
-  setStatus('GeoJSON 読み込み中…');
-  await loadGeojson();
-  renderAllRoutes();
-
-  const hits = judge(lat, lng);
-
-  renderHits(hits, lat, lng);
-  renderResults(hits);
-  updateSummary(lat, lng, hits, '座標指定');
-  setStatus('判定完了');
-
-  await saveSearchLog({
-    keyword: `${lat},${lng}`,
-    lat,
-    lng,
-    hitCount: hits.length,
-    resultLabel: '座標指定'
+    searchedLat: lat,
+    searchedLng: lng,
+    resultLabel: areaLabel,
+    hitCount: hits.length
   });
 }
 
@@ -1009,11 +1181,14 @@ async function runByCurrentLocation() {
   try {
     const feature = await geocodeAddressYahoo(keyword);
     ({ lat, lng } = parseYahooCoordinates(feature));
-    display = feature?.Property?.Address || feature?.Name || keyword;
+    display =
+      (feature && feature.Property ? feature.Property.Address : '') ||
+      (feature ? feature.Name : '') ||
+      keyword;
   } catch (addressErr) {
     const placeFeature = await searchPlaceYahoo(keyword);
     ({ lat, lng } = parseYahooPlaceCoordinates(placeFeature));
-    display = placeFeature?.Name || keyword;
+    display = (placeFeature ? placeFeature.Name : '') || keyword;
   }
 
   els.lat.value = lat;
@@ -1026,12 +1201,13 @@ async function runByCurrentLocation() {
   updateSummary(lat, lng, hits, display);
   setStatus('判定完了');
 
-  await saveSearchLog({
+  await logSearchAction({
+    searchType: 'address',
     keyword,
-    lat,
-    lng,
-    hitCount: hits.length,
-    resultLabel: display
+    searchedLat: lat,
+    searchedLng: lng,
+    resultLabel: display,
+    hitCount: hits.length
   });
 }
 
@@ -1101,6 +1277,12 @@ async function runByCurrentLocation() {
       }
     });
 
+const savedEmail = getSavedEmail();
+if (savedEmail) {
+  els.userEmail.value = savedEmail;
+  setEmailStatus('保存済みメールアドレスを読み込みました。', true);
+}
+
     async function init() {
       try {
         setStatus('GeoJSON 読み込み中…');
@@ -1114,6 +1296,9 @@ async function runByCurrentLocation() {
         setStatus('エラー');
       }
     }
+
+init();
+
   </script>
 </body>
 </html>
