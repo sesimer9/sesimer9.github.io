@@ -258,9 +258,9 @@
       <div id="emailCard" class="card">
   <strong>利用者メール登録</strong>
   <form id="emailForm"
-        action="https://script.google.com/macros/s/AKfycbzDr5yPZsP7FG6hTqkfIiYEWYN5uMzBVWHxWLE36OCLfypzDxRLB8BxQuJNZjKxbmue/exec"
-        method="POST"
-        target="emailLogIframe">
+      action="https://script.google.com/macros/s/AKfycbwB_V8yT-oPls9z7wifzcg3dmTcAHGr8ZLqqrxaXZ_bP3d4MgQZXjiBSzGYtp0tjfis/exec"
+      method="POST"
+      target="emailLogIframe">
     <div class="grid1" style="margin-top:12px;">
       <div>
         <label for="userEmail">メールアドレス<span class="required">*</span></label>
@@ -299,7 +299,7 @@
   <p class="mini">一度入力したメールは、使える環境では次回以降自動入力します。</p>
 </div>
 
-      <div id="appBody">
+      <div id="appBody" class="hidden">
         <div class="card">
           <div class="grid1">
             <div>
@@ -454,6 +454,7 @@
   emailStatus: document.getElementById('emailStatus'),
   submitEmail: document.getElementById('submitEmail'),
   userEmail: document.getElementById('userEmail'),
+  appBody: document.getElementById('appBody'),
 
   eventTypeField: document.getElementById('eventTypeField'),
   pageField: document.getElementById('pageField'),
@@ -577,31 +578,32 @@ function fillCommonLogFields(payload) {
 }
 
 async function postEmailLog(payload) {
-  const formData = new FormData();
+  const params = new URLSearchParams();
 
-  formData.append('email', els.userEmail.value.trim());
-  formData.append('eventType', payload.eventType || 'email_capture');
-  formData.append('page', location.href);
-  formData.append('userAgent', navigator.userAgent);
-  formData.append('userLat', payload.userLat ?? '');
-  formData.append('userLng', payload.userLng ?? '');
-  formData.append('userAccuracy', payload.userAccuracy ?? '');
-  formData.append('userAddressRaw', payload.userAddressRaw ?? '');
-  formData.append('userAreaLabel', payload.userAreaLabel ?? '');
-  formData.append('searchType', payload.searchType ?? '');
-  formData.append('keyword', payload.keyword ?? '');
-  formData.append('searchedLat', payload.searchedLat ?? '');
-  formData.append('searchedLng', payload.searchedLng ?? '');
-  formData.append('resultLabel', payload.resultLabel ?? '');
-  formData.append('hitCount', payload.hitCount ?? '');
+  params.append('email', els.userEmail.value.trim());
+  params.append('eventType', payload.eventType || 'email_capture');
+  params.append('page', location.href);
+  params.append('userAgent', navigator.userAgent);
+  params.append('userLat', payload.userLat ?? '');
+  params.append('userLng', payload.userLng ?? '');
+  params.append('userAccuracy', payload.userAccuracy ?? '');
+  params.append('userAddressRaw', payload.userAddressRaw ?? '');
+  params.append('userAreaLabel', payload.userAreaLabel ?? '');
+  params.append('searchType', payload.searchType ?? '');
+  params.append('keyword', payload.keyword ?? '');
+  params.append('searchedLat', payload.searchedLat ?? '');
+  params.append('searchedLng', payload.searchedLng ?? '');
+  params.append('resultLabel', payload.resultLabel ?? '');
+  params.append('hitCount', payload.hitCount ?? '');
 
-  const res = await fetch(els.emailForm.action, {
+  await fetch(els.emailForm.action, {
     method: 'POST',
-    body: formData,
-    mode: 'no-cors'
+    mode: 'no-cors',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+    },
+    body: params.toString()
   });
-
-  return res;
 }
 
 async function captureEmailWithLocation() {
@@ -619,6 +621,7 @@ async function captureEmailWithLocation() {
 });
 
   setEmailStatus(`登録しました: ${email}`, true);
+els.appBody.classList.remove('hidden');
 }
 
 async function logSearchAction(payload) {
@@ -1281,6 +1284,7 @@ const savedEmail = getSavedEmail();
 if (savedEmail) {
   els.userEmail.value = savedEmail;
   setEmailStatus('保存済みメールアドレスを読み込みました。', true);
+els.appBody.classList.remove('hidden');
 }
 
     async function init() {
