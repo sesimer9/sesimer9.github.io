@@ -431,12 +431,15 @@
   <script>
     const YAHOO_APP_ID = 'dmVyPTIwMjUwNyZpZD1QMDdkaFFITFh1Jmhhc2g9TVRKaE0yVXhNVGhsWVdFMlpqQXhPUQ';
     const GEOJSON_FILE = './routes_from_geojson5_100m.geojson';
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyQDfeKj_P9jjszJYyY7EBnq_VbetBGcnDPiyuKvaPPLRpJ2Hw2J5dOzkn-aKNb841N/exec';
     
 
     let routeGeojson = null;
     let allLayer = null;
     let hitLayer = null;
     let pointLayer = null;
+    let currentEmail = '';
+    let locationInfo = null;
 
     const routeColors = {
       polygon: '#e8891c',
@@ -613,20 +616,50 @@ async function captureEmailWithLocation() {
     throw new Error('メールアドレスを正しく入力してください。');
   }
 
-  const locationInfo = await getUserLocationInfo();
+  currentEmail = email;
+  locationInfo = null;
+
+  try {
+    const info = await getUserLocationInfo();
+    locationInfo = {
+      lat: String(info.userLat ?? ''),
+      lng: String(info.userLng ?? ''),
+      accuracy: String(info.userAccuracy ?? ''),
+      addressRaw: info.userAddressRaw || '',
+      areaLabel: info.userAreaLabel || ''
+    };
+
+    fillCommonLogFields({
+      userLat: info.userLat ?? '',
+      userLng: info.userLng ?? '',
+      userAccuracy: info.userAccuracy ?? '',
+      userAddressRaw: info.userAddressRaw ?? '',
+      userAreaLabel: info.userAreaLabel ?? '',
+      searchType: '',
+      keyword: '',
+      searchedLat: '',
+      searchedLng: '',
+      resultLabel: '',
+      hitCount: ''
+    });
+  } catch (e) {
+    fillCommonLogFields({
+      userLat: '',
+      userLng: '',
+      userAccuracy: '',
+      userAddressRaw: '',
+      userAreaLabel: '',
+      searchType: '',
+      keyword: '',
+      searchedLat: '',
+      searchedLng: '',
+      resultLabel: '',
+      hitCount: ''
+    });
+  }
+
   saveEmailLocally(email);
-
   els.eventTypeField.value = 'email_capture';
-  fillCommonLogFields({
-    ...locationInfo,
-    searchType: '',
-    keyword: '',
-    searchedLat: '',
-    searchedLng: '',
-    resultLabel: '',
-    hitCount: ''
-  });
-
   els.emailForm.submit();
 
   setEmailStatus(`登録しました: ${email}`, true);
@@ -987,6 +1020,44 @@ function parseYahooPlaceCoordinates(feature) {
   return { lat, lng };
 }
 
+async function logSearchAction({
+  keyword = '',
+  searchType = '',
+  searchedLat = '',
+  searchedLng = '',
+  hitCount = '',
+  resultLabel = ''
+}) {
+  const email = currentEmail || els.userEmail.value.trim();
+  if (!validateEmail(email)) return;
+
+  const payload = {
+    eventType: 'search',
+    email,
+    page: location.href,
+    keyword,
+    searchType,
+    searchedLat: String(searchedLat ?? ''),
+    searchedLng: String(searchedLng ?? ''),
+    hitCount: String(hitCount ?? ''),
+    resultLabel,
+    userAgent: navigator.userAgent,
+
+    userLat: locationInfo?.lat || '',
+    userLng: locationInfo?.lng || '',
+    userAccuracy: locationInfo?.accuracy || '',
+    userAddressRaw: locationInfo?.addressRaw || '',
+    userAreaLabel: locationInfo?.areaLabel || ''
+  };
+
+  await fetch(WEB_APP_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+}
+
 async function runByCoords() {
 const { lat, lng } = parseCoords();
 
@@ -1001,12 +1072,12 @@ updateSummary(lat, lng, hits, '座標指定');
 setStatus('判定完了');
 
 await logSearchAction({
-searchType: 'coords',
-keyword: '',
-searchedLat: lat,
-searchedLng: lng,
-resultLabel: '座標指定',
-hitCount: hits.length
+  searchType: 'coords',
+  keyword: '',
+  searchedLat: String(lat),
+  searchedLng: String(lng),
+  resultLabel: '座標指定',
+  hitCount: String(hits.length)
 });
 }
 
@@ -1216,11 +1287,12 @@ const accuracy = currentPos.coords.accuracy;
   await logSearchAction({
     searchType: 'address',
     keyword,
-    searchedLat: lat,
-    searchedLng: lng,
+    searchedLat: String(lat),
+    searchedLng: String(lng),
     resultLabel: display,
-    hitCount: hits.length
+    hitCount: String(hits.length)
   });
+
 }
 
     els.searchByCoords.addEventListener('click', async () => {
@@ -1292,8 +1364,9 @@ const accuracy = currentPos.coords.accuracy;
 const savedEmail = getSavedEmail();
 if (savedEmail) {
   els.userEmail.value = savedEmail;
+  currentEmail = savedEmail;
   setEmailStatus('保存済みメールアドレスを読み込みました。', true);
-els.appBody.classList.remove('hidden');
+  els.appBody.classList.remove('hidden');
 }
 
     async function init() {
