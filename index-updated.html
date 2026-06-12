@@ -414,7 +414,7 @@
       </div>
     </form>
     <iframe name="emailLogIframe" class="hidden-frame"></iframe>
-    <div id="emailStatus" class="status">メール未登録でも判定はできますが、ログには残りません。</div>
+    <div id="emailStatus" class="status hidden"></div>
     <p class="mini">一度入力したメールは、使える環境では次回以降自動入力します。</p>
   </div>
 </aside>
@@ -455,6 +455,7 @@
   emailStatus: document.getElementById('emailStatus'),
   submitEmail: document.getElementById('submitEmail'),
   userEmail: document.getElementById('userEmail'),
+　emailCard: document.getElementById('emailCard'),
   appBody: document.getElementById('appBody'),
 
   eventTypeField: document.getElementById('eventTypeField'),
@@ -664,6 +665,7 @@ els.emailForm.submit();
 setEmailStatus(`登録しました: ${email}`, true);
 els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
 els.appBody.classList.remove('hidden');
+els.emailCard.classList.add('hidden');
 }
 
 async function logSearchAction(payload) {
@@ -1381,6 +1383,7 @@ if (savedEmail) {
   setEmailStatus('保存済みメールアドレスを読み込みました。', true);
   els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
   els.appBody.classList.remove('hidden');
+　els.emailCard.classList.add('hidden');
 }
 
     async function init() {
