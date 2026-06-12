@@ -616,13 +616,21 @@ async function captureEmailWithLocation() {
   const locationInfo = await getUserLocationInfo();
   saveEmailLocally(email);
 
-  await postEmailLog({
-  eventType: 'email_capture',
-  ...locationInfo
-});
+  els.eventTypeField.value = 'email_capture';
+  fillCommonLogFields({
+    ...locationInfo,
+    searchType: '',
+    keyword: '',
+    searchedLat: '',
+    searchedLng: '',
+    resultLabel: '',
+    hitCount: ''
+  });
+
+  els.emailForm.submit();
 
   setEmailStatus(`登録しました: ${email}`, true);
-els.appBody.classList.remove('hidden');
+  els.appBody.classList.remove('hidden');
 }
 
 async function logSearchAction(payload) {
