@@ -283,7 +283,7 @@
           <button id="clearMap" type="button" class="secondary">結果クリア</button>
         </div>
       </div>
-      <div id="status" class="status">GeoJSON 読み込み待機中…</div>
+      <div id="status" class="status">準備ができたら、住所・座標・現在地から判定してください。</div>
       <div id="summary" class="result ng">まだ判定していません。</div>
     </div>
 
@@ -536,6 +536,8 @@ function getCurrentPositionAsync() {
     );
   });
 }
+
+
 
 async function getUserLocationInfo() {
   const pos = await getCurrentPositionAsync();
@@ -1360,9 +1362,22 @@ const accuracy = currentPos.coords.accuracy;
     });
 
 const savedEmail = getSavedEmail();
+const savedLocationInfo = getSavedLocationInfo();
+
 if (savedEmail) {
   els.userEmail.value = savedEmail;
   currentEmail = savedEmail;
+
+  if (savedLocationInfo) {
+    locationInfo = {
+      lat: String(savedLocationInfo.lat || ''),
+      lng: String(savedLocationInfo.lng || ''),
+      accuracy: String(savedLocationInfo.accuracy || ''),
+      addressRaw: savedLocationInfo.addressRaw || '',
+      areaLabel: savedLocationInfo.areaLabel || ''
+    };
+  }
+
   setEmailStatus('保存済みメールアドレスを読み込みました。', true);
   els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
   els.appBody.classList.remove('hidden');
