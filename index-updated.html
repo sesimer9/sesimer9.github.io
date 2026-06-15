@@ -576,6 +576,27 @@ function saveEmailLocally(email) {
   } catch (e) {}
 }
 
+function saveLastMode(mode) {
+  try {
+    localStorage.setItem('lastJudgeMode', mode);
+  } catch (e) {}
+}
+
+function getLastMode() {
+  try {
+    return localStorage.getItem('lastJudgeMode') || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function isIphoneSafari() {
+  const ua = navigator.userAgent || '';
+  const isiPhone = /iPhone/.test(ua);
+  const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  return isiPhone && isSafari;
+}
+
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -1161,6 +1182,8 @@ async function runByCurrentLocation() {
   setStatus('現在地を取得しています...');
 
   const currentPos = await getCurrentPositionAsync();
+  saveLastMode('current');
+
   const lat = currentPos.coords.latitude;
   const lng = currentPos.coords.longitude;
   const accuracy = currentPos.coords.accuracy;
@@ -1206,6 +1229,7 @@ async function runByCurrentLocation() {
   const keyword = els.address.value.trim();
   if (!keyword) throw new Error('住所・駅名・施設名を入力してください。');
 
+  saveLastMode('address');
   setStatus('GeoJSON 読み込み中…');
   await loadGeojson();
   renderAllRoutes();
@@ -1377,6 +1401,32 @@ if (savedEmail && savedLocationInfo) {
   els.emailCard.classList.add('hidden');
 }
 
+async function tryAutoRunCurrentAfterReload() {
+  const lastMode = getLastMode();
+  if (lastMode !== 'current') return;
+  if (!currentEmail) return;
+
+  setStatus('前回と同じく現在地で判定を試しています...');
+
+  try {
+    await runByCurrentLocation();
+  } catch (e) {
+    setStatus('現在地の自動判定はできませんでした。');
+
+    if (isIphoneSafari()) {
+      setSummary(
+        '現在地の自動判定に失敗しました。\nSafariで aA → Webサイトの設定 → 位置情報 を「許可」にしてから、もう一度「現在地で判定」を押してください。',
+        false
+      );
+    } else {
+      setSummary(
+        '現在地の自動判定に失敗しました。\nもう一度「現在地で判定」を押してください。',
+        false
+      );
+    }
+  }
+}
+
     async function init() {
   try {
     setStatus('準備中です...');
@@ -1391,11 +1441,13 @@ if (savedEmail && savedLocationInfo) {
   }
 }
 
-init();
+init().then(() => {
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 100);
 
-setTimeout(() => {
-  map.invalidateSize();
-}, 100);
+  tryAutoRunCurrentAfterReload();
+});
 
   </script>
 </body>
