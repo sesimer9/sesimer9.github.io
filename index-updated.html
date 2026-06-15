@@ -202,14 +202,23 @@
       margin-bottom:5px;
     }
     .toolbar{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
-    .toolbar button{
-      flex:none;
-    }
+  display:flex;
+  gap:8px;
+  flex-wrap:nowrap;
+  margin-top:10px;
+}
+
+.toolbar button{
+  flex:1 1 0;
+  min-width:0;
+}
+
+.caution-note{
+  margin:10px 4px 0;
+  font-size:.8rem;
+  line-height:1.5;
+  color:var(--muted);
+}
     .hidden{
       display:none !important;
     }
@@ -223,65 +232,107 @@
       height:0;
       border:0;
     }
-    @media (max-width:980px){
+
+/* 共通（PC・スマホ両方） */
+.mobile-title{
+  grid-column: 1 / -1;
+  padding:16px 22px 0;
+  background:var(--surface2);
+  border-bottom:1px solid var(--border);
+}
+
+.mobile-title h1{
+  margin:0 0 10px;
+  font-size:1.5rem;
+  line-height:1.25;
+}
+
+/* スマホ用 */
+@media (max-width:980px){
   .app{
-    grid-template-columns:1fr;
+    display:flex;
+    flex-direction:column;
+    min-height:auto;
+  }
+
+  .mobile-title{
+    order:1;
+    padding:14px 14px 0;
+  }
+
+  .mobile-title h1{
+    margin:0;
+    font-size:1.35rem;
+    line-height:1.35;
   }
 
   .map-wrap{
-    order:1;
+    order:2;
   }
 
   .sidebar{
-    order:2;
+    order:3;
+    padding:14px;
     border-right:none;
-    border-bottom:1px solid var(--border);
+    border-top:1px solid var(--border);
+    border-bottom:none;
   }
 
   #map{
-    height:56vh;
+    height:48vh;
   }
 
-  .legend{
-    position:static;
-    max-width:none;
-    padding:0 14px 14px;
+  .toolbar{
+    display:flex;
+    gap:8px;
+    flex-wrap:nowrap;
+  }
+
+  .toolbar button{
+    flex:1 1 0;
+    min-width:0;
   }
 }
+
   </style>
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar">
-  <h1>交通誘導検定者配置路線 検索・判定アプリ［参考版］</h1>
-  <p id="leadText" class="lead">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
+  <header class="mobile-title">
+    <h1>交通誘導検定者配置路線 検索・判定アプリ［参考版］</h1>
+  </header>
 
-  <div id="appBody" class="hidden">
-    <div class="card">
-  <div class="grid1">
-    <div>
-      <label for="address">住所・駅名・施設名検索</label>
-      <input
-        id="address"
-        type="text"
-        placeholder="例：江東区新砂1-6-35 / 高井戸駅 / 東京ビッグサイト"
-      />
-    </div>
+  <aside class="sidebar">
 
-    <div class="row">
-      <button id="searchByAddress" type="button">住所で判定</button>
-      <button id="searchByCurrent" type="button" class="secondary">現在地で判定</button>
-    </div>
+<div id="appBody" class="hidden">
+  <div class="card controls-card">
+    <div class="grid1">
+      <div>
+        <label for="address">住所・駅名・施設名検索</label>
+        <input
+          id="address"
+          type="text"
+          placeholder="例：江東区新砂1-6-35 / 高井戸駅 / 東京ビッグサイト"
+        />
+      </div>
 
-    <div class="toolbar">
-      <button id="showAll" type="button" class="secondary">交通誘導検定者配置路線を表示</button>
-      <button id="clearMap" type="button" class="secondary">結果クリア</button>
+      <div class="row">
+        <button id="searchByAddress" type="button">住所で判定</button>
+        <button id="searchByCurrent" type="button" class="secondary">現在地で判定</button>
+      </div>
+
+      <div class="toolbar">
+        <button id="showAll" type="button" class="secondary">広く表示</button>
+        <button id="clearMap" type="button" class="secondary">結果クリア</button>
+      </div>
     </div>
   </div>
 
-  <div id="status" class="status">住所または現在地から判定してください。</div>
-  <div id="summary" class="result ng">まだ判定していません。</div>
-</div>
+  <div class="card result-card">
+    <div id="status" class="status">住所または現在地から判定してください。</div>
+    <div id="summary" class="result ng">まだ判定していません。</div>
+    <p id="leadText" class="lead caution-note">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
+  </div>
 
     <div class="card">
       <strong>お問い合わせ・ご要望</strong>
@@ -399,7 +450,6 @@
 </aside>
 
     <main class="map-wrap">
-      
       <div id="map"></div>
     </main>
   </div>
@@ -416,6 +466,7 @@
     let pointLayer = null;
     let currentEmail = '';
     let locationInfo = null;
+    let lastSearchLatLng = null;
 
     const routeColors = {
       polygon: '#e8891c',
@@ -1116,39 +1167,39 @@ async function runByCurrentLocation() {
 
   let areaLabel = `現在地付近（精度 約${Math.round(accuracy)}m）`;
 
-try {
-  const rev = await reverseGeocodeGsi(lat, lng);
-  if (rev.areaLabel) {
-    areaLabel = `${rev.areaLabel}付近（現在地判定／精度 約${Math.round(accuracy)}m）`;
+  try {
+    const rev = await reverseGeocodeGsi(lat, lng);
+    if (rev.areaLabel) {
+      areaLabel = `${rev.areaLabel}付近（現在地判定／精度 約${Math.round(accuracy)}m）`;
+    }
+  } catch (gsiErr) {
+    console.warn('GSI reverse geocode failed', gsiErr);
   }
-} catch (gsiErr) {
-  console.warn('GSI reverse geocode failed', gsiErr);
-}
 
   setStatus('GeoJSONを読み込んで判定しています...');
   await loadGeojson();
   renderAllRoutes();
 
   const hits = judge(lat, lng);
-renderHits(hits, lat, lng);
-renderResults(hits);
-updateSummary(hits, areaLabel);
-setStatus('');
+  lastSearchLatLng = [lat, lng];
+  renderHits(hits, lat, lng);
+  renderResults(hits);
+  updateSummary(hits, areaLabel);
 
-if (hits.length) {
-  setStatus(`判定完了：${hits.length}件ヒットしました。`);
-} else {
-  setStatus('判定完了：該当ルートは見つかりませんでした。');
-}
+  if (hits.length) {
+    setStatus(`判定完了：${hits.length}件ヒットしました。`);
+  } else {
+    setStatus('判定完了：該当ルートは見つかりませんでした。');
+  }
 
-await logSearchAction({
-  searchType: 'current',
-  keyword: 'CURRENT_LOCATION',
-  searchedLat: lat,
-  searchedLng: lng,
-  resultLabel: areaLabel,
-  hitCount: hits.length
-});
+  await logSearchAction({
+    searchType: 'current',
+    keyword: 'CURRENT_LOCATION',
+    searchedLat: lat,
+    searchedLng: lng,
+    resultLabel: areaLabel,
+    hitCount: hits.length
+  });
 }
 
     async function runByAddress() {
@@ -1174,23 +1225,21 @@ await logSearchAction({
     display = (placeFeature ? placeFeature.Name : '') || keyword;
   }
 
-
-
   const hits = judge(lat, lng);
-
+  lastSearchLatLng = [lat, lng];
   renderHits(hits, lat, lng);
   renderResults(hits);
   updateSummary(hits, display);
-setStatus('');
+  setStatus('');
 
   await logSearchAction({
-  searchType: 'address',
-  keyword,
-  searchedLat: String(lat),
-  searchedLng: String(lng),
-  resultLabel: display,
-  hitCount: String(hits.length)
-});
+    searchType: 'address',
+    keyword,
+    searchedLat: String(lat),
+    searchedLng: String(lng),
+    resultLabel: display,
+    hitCount: String(hits.length)
+  });
 }
 
 let clickAddressMarker = null;
@@ -1282,8 +1331,14 @@ els.searchByAddress.addEventListener('click', async () => {
   try {
     await loadGeojson();
     renderAllRoutes();
-    map.fitBounds(allLayer.getBounds().pad(0.05));
-    setStatus('交通誘導検定者配置路線を表示しました。');
+
+    if (lastSearchLatLng) {
+      map.setView(lastSearchLatLng, 14);
+      setStatus('検索地点を中心に広く表示しました。');
+    } else if (allLayer) {
+      map.fitBounds(allLayer.getBounds().pad(0.02));
+      setStatus('広く表示しました。');
+    }
   } catch (e) {
     setSummary(e.message, false);
   }
@@ -1337,6 +1392,10 @@ if (savedEmail && savedLocationInfo) {
 }
 
 init();
+
+setTimeout(() => {
+  map.invalidateSize();
+}, 100);
 
   </script>
 </body>
