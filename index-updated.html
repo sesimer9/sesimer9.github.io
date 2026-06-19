@@ -11,443 +11,469 @@
 <script src="https://maps.gsi.go.jp/js/muni.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <style>
-    :root{
-      --bg:#f7f6f2;
-      --surface:#ffffff;
-      --surface2:#fbfbf9;
-      --text:#28251d;
-      --muted:#6f6d68;
-      --primary:#01696f;
-      --primary2:#0c4e54;
-      --accent:#e8891c;
-      --danger:#b42318;
-      --ok:#215c3c;
-      --okbg:#dcefe2;
-      --ng:#7b2330;
-      --ngbg:#f5dde1;
-      --warn:#7a5320;
-      --warnbg:#f6ebd7;
-      --border:#d8d4cc;
-      --shadow:0 14px 34px rgba(40,37,29,.08);
-      --radius:18px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background:var(--bg);
-      color:var(--text);
-    }
-
-    h1{
-      font-size:1.5rem;
-      line-height:1.25;
-      margin:0 0 10px;
-    }
-
-    .app{
-      display:grid;
-      grid-template-columns:420px 1fr;
-      min-height:100vh;
-    }
-    .sidebar{
-      padding:22px;
-      background:var(--surface2);
-      border-right:1px solid var(--border);
-      overflow:auto;
-    }
-    .map-wrap{
-      position:relative;
-    }
-    #map{
-      height:100vh;
-      width:100%;
-    }
-    p{
-      line-height:1.6;
-    }
-    .lead{
-      color:var(--muted);
-      margin:0 0 18px;
-    }
-    .card{
-      background:var(--surface);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:16px;
-      margin-bottom:14px;
-    }
-    .grid2{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-    .grid1{
-      display:grid;
-      gap:10px;
-    }
-    label{
-      display:block;
-      font-size:.92rem;
-      font-weight:700;
-      margin-bottom:6px;
-    }
-    input,textarea,select{
-      width:100%;
-      padding:12px 14px;
-      border:1px solid var(--border);
-      border-radius:12px;
-      font-size:15px;
-      background:#fff;
-    }
-    button{
-      appearance:none;
-      border:none;
-      border-radius:12px;
-      padding:12px 14px;
-      background:var(--primary);
-      color:#fff;
-      font-size:15px;
-      font-weight:700;
-      cursor:pointer;
-    }
-    button:hover{
-      background:var(--primary2);
-    }
-    button.secondary{
-      background:#fff;
-      color:var(--text);
-      border:1px solid var(--border);
-    }
-    button:disabled{
-      opacity:.6;
-      cursor:not-allowed;
-    }
-    .row{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .row > *{
-      flex:1;
-    }
-    .status,.result{
-      padding:14px;
-      border-radius:14px;
-      margin-top:12px;
-      white-space:pre-wrap;
-    }
-    .status{
-      background:var(--warnbg);
-      color:var(--warn);
-    }
-    .result.ok{
-      background:var(--okbg);
-      color:var(--ok);
-    }
-    .result.ng{
-      background:var(--ngbg);
-      color:var(--ng);
-    }
-    .chips{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-top:8px;
-    }
-    .chip{
-      padding:6px 10px;
-      border-radius:999px;
-      background:#fff;
-      border:1px solid var(--border);
-      font-size:.82rem;
-    }
-    .mini{
-      font-size:.88rem;
-      color:var(--muted);
-    }
-    .legend{
-      position:absolute;
-      right:18px;
-      top:18px;
-      z-index:600;
-      max-width:320px;
-    }
-    .legend .card{
-      backdrop-filter:blur(8px);
-      background:rgba(255,255,255,.92);
-    }
-    .sw{
-      display:inline-block;
-      width:12px;
-      height:12px;
-      border-radius:999px;
-      margin-right:8px;
-      vertical-align:middle;
-    }
-    .results-list{
-      display:grid;
-      gap:10px;
-      margin-top:12px;
-    }
-    .result-item{
-      padding:12px;
-      border:1px solid var(--border);
-      border-radius:14px;
-      background:#fff;
-    }
-    .result-item strong{
-      display:block;
-      margin-bottom:5px;
-    }
-    .toolbar{
-  display:flex;
-  gap:8px;
-  flex-wrap:nowrap;
-  margin-top:10px;
-}
-
-.toolbar button{
-  flex:1 1 0;
-  min-width:0;
-}
-
-.caution-note{
-  margin:10px 4px 0;
-  font-size:.8rem;
-  line-height:1.5;
-  color:var(--muted);
-}
-    .hidden{
-      display:none !important;
-    }
-    .required{
-      color:var(--danger);
-      margin-left:4px;
-    }
-    iframe.hidden-frame{
-      display:none;
-      width:0;
-      height:0;
-      border:0;
-    }
-
-/* 共通（PC・スマホ両方） */
-.mobile-title{
-  grid-column: 1 / -1;
-  padding:16px 22px 0;
-  background:var(--surface2);
-  border-bottom:1px solid var(--border);
-}
-
-.mobile-title h1{
-  margin:0 0 10px;
-  font-size:1.5rem;
-  line-height:1.25;
-}
-
-/* スマホ用 */
-@media (max-width:980px){
-  .app{
-    display:flex;
-    flex-direction:column;
-    min-height:auto;
+  :root{
+    --bg:#f7f6f2;
+    --surface:#ffffff;
+    --surface2:#fbfbf9;
+    --text:#28251d;
+    --muted:#6f6d68;
+    --primary:#01696f;
+    --primary2:#0c4e54;
+    --accent:#e8891c;
+    --danger:#b42318;
+    --ok:#215c3c;
+    --okbg:#dcefe2;
+    --ng:#7b2330;
+    --ngbg:#f5dde1;
+    --warn:#7a5320;
+    --warnbg:#f6ebd7;
+    --border:#d8d4cc;
+    --shadow:0 14px 34px rgba(40,37,29,.08);
+    --radius:18px;
   }
 
-  .mobile-title{
-    order:1;
-    padding:14px 14px 0;
+  *{
+    box-sizing:border-box;
   }
 
-  .mobile-title h1{
+  body{
     margin:0;
-    font-size:1.35rem;
-    line-height:1.35;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
   }
 
-  .map-wrap{
-    order:2;
+  h1{
+    font-size:1.5rem;
+    line-height:1.25;
+    margin:0 0 10px;
   }
 
-  .sidebar{
-    order:3;
+  p{
+    line-height:1.6;
+  }
+
+  .lead{
+    color:var(--muted);
+    margin:0 0 18px;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px;
+    margin-bottom:14px;
+  }
+
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+
+  .grid1{
+    display:grid;
+    gap:10px;
+  }
+
+  label{
+    display:block;
+    font-size:.92rem;
+    font-weight:700;
+    margin-bottom:6px;
+  }
+
+  input,
+  textarea,
+  select{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    font-size:15px;
+    background:#fff;
+  }
+
+  button{
+    appearance:none;
+    border:none;
+    border-radius:12px;
+    padding:12px 14px;
+    background:var(--primary);
+    color:#fff;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  button:hover{
+    background:var(--primary2);
+  }
+
+  button.secondary{
+    background:#fff;
+    color:var(--text);
+    border:1px solid var(--border);
+  }
+
+  button:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+  }
+
+  .row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .row > *{
+    flex:1;
+  }
+
+  .status,
+  .result{
     padding:14px;
-    border-right:none;
-    border-top:1px solid var(--border);
-    border-bottom:none;
+    border-radius:14px;
+    margin-top:12px;
+    white-space:pre-wrap;
   }
 
-  #map{
-    height:48vh;
+  .status{
+    background:var(--warnbg);
+    color:var(--warn);
+  }
+
+  .result.ok{
+    background:var(--okbg);
+    color:var(--ok);
+  }
+
+  .result.ng{
+    background:var(--ngbg);
+    color:var(--ng);
+  }
+
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:8px;
+  }
+
+  .chip{
+    padding:6px 10px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid var(--border);
+    font-size:.82rem;
+  }
+
+  .mini{
+    font-size:.88rem;
+    color:var(--muted);
+  }
+
+  .legend{
+    position:absolute;
+    right:18px;
+    top:18px;
+    z-index:600;
+    max-width:320px;
+  }
+
+  .legend .card{
+    backdrop-filter:blur(8px);
+    background:rgba(255,255,255,.92);
+  }
+
+  .sw{
+    display:inline-block;
+    width:12px;
+    height:12px;
+    border-radius:999px;
+    margin-right:8px;
+    vertical-align:middle;
+  }
+
+  .results-list{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .result-item{
+    padding:12px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:#fff;
+  }
+
+  .result-item strong{
+    display:block;
+    margin-bottom:5px;
   }
 
   .toolbar{
     display:flex;
     gap:8px;
     flex-wrap:nowrap;
+    margin-top:10px;
   }
 
   .toolbar button{
     flex:1 1 0;
     min-width:0;
   }
-}
 
-  </style>
+  .caution-note{
+    margin:10px 4px 0;
+    font-size:.8rem;
+    line-height:1.5;
+    color:var(--muted);
+  }
+
+  .hidden{
+    display:none !important;
+  }
+
+  .required{
+    color:var(--danger);
+    margin-left:4px;
+  }
+
+  iframe.hidden-frame{
+    display:none;
+    width:0;
+    height:0;
+    border:0;
+  }
+
+  .page-title{
+    padding:16px 22px 12px;
+    background:var(--surface2);
+    border-bottom:1px solid var(--border);
+  }
+
+  .page-title h1{
+    margin:0;
+    font-size:1.5rem;
+    line-height:1.25;
+  }
+
+  .app{
+    display:grid;
+    grid-template-columns:420px 1fr;
+    min-height:calc(100vh - 76px);
+  }
+
+  .sidebar{
+    padding:22px;
+    background:var(--surface2);
+    border-right:1px solid var(--border);
+    overflow:auto;
+  }
+
+  .map-wrap{
+    position:relative;
+    min-height:calc(100vh - 76px);
+  }
+
+  #map{
+    width:100%;
+    height:calc(100vh - 76px);
+  }
+
+  @media (max-width:980px){
+    .page-title{
+      padding:14px 14px 10px;
+    }
+
+    .page-title h1{
+      font-size:1.35rem;
+      line-height:1.35;
+    }
+
+    .app{
+      display:flex;
+      flex-direction:column;
+      min-height:auto;
+    }
+
+    .map-wrap{
+      order:1;
+      min-height:auto;
+    }
+
+    .sidebar{
+      order:2;
+      padding:14px;
+      border-right:none;
+      border-top:1px solid var(--border);
+      border-bottom:none;
+    }
+
+    #map{
+      width:100%;
+      height:48vh;
+      min-height:320px;
+    }
+  }
+</style>
 </head>
 <body>
-  <div class="app">
-  <header class="mobile-title">
+  <header class="page-title">
     <h1>交通誘導検定者配置路線 検索・判定アプリ［参考版］</h1>
   </header>
 
-  <aside class="sidebar">
-
-<div id="appBody" class="hidden">
-  <div class="card controls-card">
-    <div class="grid1">
-      <div>
-        <label for="address">住所・駅名・施設名検索</label>
-        <input
-          id="address"
-          type="text"
-          placeholder="例：江東区新砂1-6-35 / 高井戸駅 / 東京ビッグサイト"
-        />
-      </div>
-
-      <div class="row">
-        <button id="searchByAddress" type="button">住所で判定</button>
-        <button id="searchByCurrent" type="button" class="secondary">現在地で判定</button>
-      </div>
-
-      <div class="toolbar">
-        <button id="showAll" type="button" class="secondary">広く表示</button>
-        <button id="clearMap" type="button" class="secondary">結果クリア</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="card result-card">
-    <div id="status" class="status">住所または現在地から判定してください。</div>
-    <div id="summary" class="result ng">まだ判定していません。</div>
-    <p id="leadText" class="lead caution-note">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
-  </div>
-
-    <div class="card">
-      <strong>お問い合わせ・ご要望</strong>
-      <p class="mini">誤判定の可能性、追加してほしい道路、使い方に関するご質問があればお知らせください。</p>
-
-      <form
-        id="contactForm"
-        action="https://script.google.com/macros/s/AKfycbwUAp7JpqL8httKfTZTdceBI_piC5a7dATTPFy5Fk4RHrXzcyC04JHAuIfpwZerlXJ5/exec"
-        method="POST"
-        target="contact_iframe"
-      >
-        <div class="grid1" style="margin-top:12px;">
-          <div>
-            <label for="contactType">問い合わせ種別</label>
-            <select id="contactType" name="contactType" required>
-              <option value="">選択してください</option>
-              <option value="誤判定の可能性">誤判定の可能性</option>
-              <option value="道路追加要望">道路追加要望</option>
-              <option value="使い方の質問">使い方の質問</option>
-              <option value="その他">その他</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="contactCompany">会社名</label>
-            <input id="contactCompany" name="company" type="text" placeholder="株式会社〇〇">
-          </div>
-
-          <div class="grid2">
+  <div class="app">
+    <aside class="sidebar">
+      <div id="appBody" class="hidden">
+        <div class="card controls-card">
+          <div class="grid1">
             <div>
-              <label for="contactName">氏名</label>
-              <input id="contactName" name="name" type="text" placeholder="山田 太郎" required>
+              <label for="address">住所・駅名・施設名検索</label>
+              <input
+                id="address"
+                type="text"
+                placeholder="例：江東区新砂1-6-35 / 高井戸駅 / 東京ビッグサイト"
+              />
             </div>
-            <div>
-              <label for="contactEmail">メールアドレス</label>
-              <input id="contactEmail" name="email" type="email" placeholder="example@company.co.jp" required>
+
+            <div class="row">
+              <button id="searchByAddress" type="button">住所で判定</button>
+              <button id="searchByCurrent" type="button" class="secondary">現在地で判定</button>
+            </div>
+
+            <div class="toolbar">
+              <button id="showAll" type="button" class="secondary">広く表示</button>
+              <button id="clearMap" type="button" class="secondary">結果クリア</button>
             </div>
           </div>
-
-          <div>
-            <label for="contactPhone">電話番号</label>
-            <input id="contactPhone" name="phone" type="tel" placeholder="090-1234-5678">
-          </div>
-
-          <div>
-            <label for="contactAddress">対象住所・場所</label>
-            <input id="contactAddress" name="targetAddress" type="text" placeholder="例：東京都江東区青海4丁目4-18">
-          </div>
-
-          <div>
-            <label for="contactMessage">内容</label>
-            <textarea
-              id="contactMessage"
-              name="message"
-              rows="5"
-              placeholder="誤判定と思われる内容、追加してほしい道路、使い方の質問などを入力してください。"
-              required
-            ></textarea>
-          </div>
         </div>
 
-        <input type="hidden" id="contactPage" name="page" value="">
-        <input type="hidden" id="contactUserAgent" name="userAgent" value="">
-
-        <div class="row" style="margin-top:12px;">
-          <button id="contactSubmit" type="submit">問い合わせを送信</button>
-        </div>
-      </form>
-
-      <iframe name="contact_iframe" style="display:none;width:0;height:0;border:0;"></iframe>
-      <div id="contactStatus" class="status">内容を入力して送信してください。</div>
-    </div>
-  </div>
-
-  <div id="emailCard" class="card">
-    <strong>利用者メール登録</strong>
-    <form id="emailForm" method="POST">
-      <div class="grid1" style="margin-top:12px;">
-        <div>
-          <label for="userEmail">メールアドレス<span class="required">*</span></label>
-          <input
-            id="userEmail"
-            name="email"
-            type="email"
-            placeholder="example@company.co.jp"
-            autocomplete="email"
-            required
-          />
+        <div class="card result-card">
+          <div id="status" class="status">住所または現在地から判定してください。</div>
+          <div id="summary" class="result ng">まだ判定していません。</div>
+          <p id="leadText" class="lead caution-note">最初に利用申請を送信すると、このページの検索・判定機能が使えるようになります。</p>
         </div>
 
-        <input type="hidden" id="eventTypeField" name="eventType" value="email_capture">
-        <input type="hidden" id="pageField" name="page" value="">
-        <input type="hidden" id="userAgentField" name="userAgent" value="">
-        <input type="hidden" id="userLatField" name="userLat" value="">
-        <input type="hidden" id="userLngField" name="userLng" value="">
-        <input type="hidden" id="userAccuracyField" name="userAccuracy" value="">
-        <input type="hidden" id="userAddressRawField" name="userAddressRaw" value="">
-        <input type="hidden" id="userAreaLabelField" name="userAreaLabel" value="">
-        <input type="hidden" id="searchTypeField" name="searchType" value="">
-        <input type="hidden" id="keywordField" name="keyword" value="">
-        <input type="hidden" id="searchedLatField" name="searchedLat" value="">
-        <input type="hidden" id="searchedLngField" name="searchedLng" value="">
-        <input type="hidden" id="resultLabelField" name="resultLabel" value="">
-        <input type="hidden" id="hitCountField" name="hitCount" value="">
+        <div class="card">
+          <strong>お問い合わせ・ご要望</strong>
+          <p class="mini">誤判定の可能性、追加してほしい道路、使い方に関するご質問があればお知らせください。</p>
+
+          <form
+            id="contactForm"
+            action="https://script.google.com/macros/s/AKfycbwUAp7JpqL8httKfTZTdceBI_piC5a7dATTPFy5Fk4RHrXzcyC04JHAuIfpwZerlXJ5/exec"
+            method="POST"
+            target="contact_iframe"
+          >
+            <div class="grid1" style="margin-top:12px;">
+              <div>
+                <label for="contactType">問い合わせ種別</label>
+                <select id="contactType" name="contactType" required>
+                  <option value="">選択してください</option>
+                  <option value="誤判定の可能性">誤判定の可能性</option>
+                  <option value="道路追加要望">道路追加要望</option>
+                  <option value="使い方の質問">使い方の質問</option>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="contactCompany">会社名</label>
+                <input id="contactCompany" name="company" type="text" placeholder="株式会社〇〇">
+              </div>
+
+              <div class="grid2">
+                <div>
+                  <label for="contactName">氏名</label>
+                  <input id="contactName" name="name" type="text" placeholder="山田 太郎" required>
+                </div>
+                <div>
+                  <label for="contactEmail">メールアドレス</label>
+                  <input id="contactEmail" name="email" type="email" placeholder="example@company.co.jp" required>
+                </div>
+              </div>
+
+              <div>
+                <label for="contactPhone">電話番号</label>
+                <input id="contactPhone" name="phone" type="tel" placeholder="090-1234-5678">
+              </div>
+
+              <div>
+                <label for="contactAddress">対象住所・場所</label>
+                <input id="contactAddress" name="targetAddress" type="text" placeholder="例：東京都江東区青海4丁目4-18">
+              </div>
+
+              <div>
+                <label for="contactMessage">内容</label>
+                <textarea
+                  id="contactMessage"
+                  name="message"
+                  rows="5"
+                  placeholder="誤判定と思われる内容、追加してほしい道路、使い方の質問などを入力してください。"
+                  required
+                ></textarea>
+              </div>
+            </div>
+
+            <input type="hidden" id="contactPage" name="page" value="">
+            <input type="hidden" id="contactUserAgent" name="userAgent" value="">
+
+            <div class="row" style="margin-top:12px;">
+              <button id="contactSubmit" type="submit">問い合わせを送信</button>
+            </div>
+          </form>
+
+          <iframe name="contact_iframe" style="display:none;width:0;height:0;border:0;"></iframe>
+          <div id="contactStatus" class="status">内容を入力して送信してください。</div>
+        </div>
       </div>
 
-      <div class="row" style="margin-top:12px;">
-        <button id="submitEmail" type="submit">メールを登録</button>
+      <div id="emailCard" class="card">
+        <strong>利用者メール登録</strong>
+        <form id="emailForm" method="POST">
+          <div class="grid1" style="margin-top:12px;">
+            <div>
+              <label for="userEmail">メールアドレス<span class="required">*</span></label>
+              <input
+                id="userEmail"
+                name="email"
+                type="email"
+                placeholder="example@company.co.jp"
+                autocomplete="email"
+                required
+              />
+            </div>
+
+            <input type="hidden" id="eventTypeField" name="eventType" value="email_capture">
+            <input type="hidden" id="pageField" name="page" value="">
+            <input type="hidden" id="userAgentField" name="userAgent" value="">
+            <input type="hidden" id="userLatField" name="userLat" value="">
+            <input type="hidden" id="userLngField" name="userLng" value="">
+            <input type="hidden" id="userAccuracyField" name="userAccuracy" value="">
+            <input type="hidden" id="userAddressRawField" name="userAddressRaw" value="">
+            <input type="hidden" id="userAreaLabelField" name="userAreaLabel" value="">
+            <input type="hidden" id="searchTypeField" name="searchType" value="">
+            <input type="hidden" id="keywordField" name="keyword" value="">
+            <input type="hidden" id="searchedLatField" name="searchedLat" value="">
+            <input type="hidden" id="searchedLngField" name="searchedLng" value="">
+            <input type="hidden" id="resultLabelField" name="resultLabel" value="">
+            <input type="hidden" id="hitCountField" name="hitCount" value="">
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button id="submitEmail" type="submit">メールを登録</button>
+          </div>
+        </form>
+        <iframe name="emailLogIframe" class="hidden-frame"></iframe>
+        <div id="emailStatus" class="status hidden"></div>
+        <p class="mini">一度入力したメールは、使える環境では次回以降自動入力します。</p>
       </div>
-    </form>
-    <iframe name="emailLogIframe" class="hidden-frame"></iframe>
-    <div id="emailStatus" class="status hidden"></div>
-    <p class="mini">一度入力したメールは、使える環境では次回以降自動入力します。</p>
-  </div>
-</aside>
+    </aside>
 
     <main class="map-wrap">
       <div id="map"></div>
@@ -523,6 +549,20 @@
   contactUserAgent: document.getElementById('contactUserAgent')
 };
 
+function updateCurrentLocationButtonUI() {
+  const state = getGeoPermissionState();
+
+  if (!els.searchByCurrent) return;
+
+  if (state === 'granted') {
+    els.searchByCurrent.textContent = '現在地で判定';
+    els.searchByCurrent.title = '前回の位置情報許可が使える可能性があります';
+  } else {
+    els.searchByCurrent.textContent = '現在地で判定（位置情報許可）';
+    els.searchByCurrent.title = '初回は位置情報の許可が必要です';
+  }
+}
+
 function setEmailStatus(msg, ok = false) {
   els.emailStatus.className = ok ? 'result ok' : 'status';
   els.emailStatus.textContent = msg;
@@ -560,6 +600,20 @@ function getCurrentPositionAsync() {
       }
     );
   });
+}
+
+function saveGeoPermissionState(state) {
+  try {
+    localStorage.setItem('geoPermissionState', state);
+  } catch (e) {}
+}
+
+function getGeoPermissionState() {
+  try {
+    return localStorage.getItem('geoPermissionState') || '';
+  } catch (e) {
+    return '';
+  }
 }
 
 function getSavedEmail() {
@@ -643,7 +697,7 @@ async function captureEmailWithLocation() {
   currentEmail = email;
   locationInfo = null;
 
-  try {
+    try {
     const info = await getUserLocationInfo();
     locationInfo = {
       lat: String(info.userLat ?? ''),
@@ -653,8 +707,10 @@ async function captureEmailWithLocation() {
       areaLabel: info.userAreaLabel ?? ''
     };
     saveLocationInfoLocally(locationInfo);
+    saveGeoPermissionState('granted');
   } catch (e) {
     console.warn('location skipped', e);
+    saveGeoPermissionState('failed');
   }
 
   try {
@@ -685,6 +741,7 @@ async function captureEmailWithLocation() {
   els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
   els.appBody.classList.remove('hidden');
   els.emailCard.classList.add('hidden');
+  updateCurrentLocationButtonUI();
 }
 
 els.emailForm.addEventListener('submit', async function (e) {
@@ -1178,25 +1235,66 @@ function searchNearbyYahoo(lat, lng, dist = 50) {
   });
 }
 
-async function runByCurrentLocation() {
-  setStatus('現在地を取得しています...');
-
-  const currentPos = await getCurrentPositionAsync();
+async function runByCurrentLocation(options = {}) {
+  const forceRefresh = !!options.forceRefresh;
   saveLastMode('current');
 
-  const lat = currentPos.coords.latitude;
-  const lng = currentPos.coords.longitude;
-  const accuracy = currentPos.coords.accuracy;
+  let lat = null;
+  let lng = null;
+  let accuracy = null;
+  let areaLabel = '現在地付近';
+  let usedSavedLocation = false;
 
-  let areaLabel = `現在地付近（精度 約${Math.round(accuracy)}m）`;
+  const savedLocationInfo = getSavedLocationInfo();
 
-  try {
-    const rev = await reverseGeocodeGsi(lat, lng);
-    if (rev.areaLabel) {
-      areaLabel = `${rev.areaLabel}付近（現在地判定／精度 約${Math.round(accuracy)}m）`;
+  if (
+    !forceRefresh &&
+    savedLocationInfo &&
+    savedLocationInfo.lat &&
+    savedLocationInfo.lng
+  ) {
+    lat = Number(savedLocationInfo.lat);
+    lng = Number(savedLocationInfo.lng);
+    accuracy = Number(savedLocationInfo.accuracy || 0);
+    areaLabel = savedLocationInfo.areaLabel || savedLocationInfo.addressRaw || '前回保存した位置';
+    usedSavedLocation = true;
+    locationInfo = {
+      lat: String(savedLocationInfo.lat || ''),
+      lng: String(savedLocationInfo.lng || ''),
+      accuracy: String(savedLocationInfo.accuracy || ''),
+      addressRaw: savedLocationInfo.addressRaw || '',
+      areaLabel: savedLocationInfo.areaLabel || ''
+    };
+    setStatus('前回保存した位置で判定しています...');
+  } else {
+    setStatus('現在地を取得しています...');
+
+    const currentPos = await getCurrentPositionAsync();
+    lat = currentPos.coords.latitude;
+    lng = currentPos.coords.longitude;
+    accuracy = currentPos.coords.accuracy;
+
+    areaLabel = `現在地付近（精度 約${Math.round(accuracy)}m）`;
+
+    try {
+      const rev = await reverseGeocodeGsi(lat, lng);
+      if (rev.areaLabel) {
+        areaLabel = `${rev.areaLabel}付近（現在地判定／精度 約${Math.round(accuracy)}m）`;
+      }
+    } catch (gsiErr) {
+      console.warn('GSI reverse geocode failed', gsiErr);
     }
-  } catch (gsiErr) {
-    console.warn('GSI reverse geocode failed', gsiErr);
+
+    locationInfo = {
+      lat: String(lat ?? ''),
+      lng: String(lng ?? ''),
+      accuracy: String(accuracy ?? ''),
+      addressRaw: '',
+      areaLabel: areaLabel
+    };
+
+    saveLocationInfoLocally(locationInfo);
+    saveGeoPermissionState('granted');
   }
 
   setStatus('GeoJSONを読み込んで判定しています...');
@@ -1207,7 +1305,10 @@ async function runByCurrentLocation() {
   lastSearchLatLng = [lat, lng];
   renderHits(hits, lat, lng);
   renderResults(hits);
-  updateSummary(hits, areaLabel);
+  updateSummary(
+    hits,
+    usedSavedLocation ? `${areaLabel}（前回保存位置）` : areaLabel
+  );
 
   if (hits.length) {
     setStatus(`判定完了：${hits.length}件ヒットしました。`);
@@ -1216,11 +1317,11 @@ async function runByCurrentLocation() {
   }
 
   await logSearchAction({
-    searchType: 'current',
-    keyword: 'CURRENT_LOCATION',
+    searchType: usedSavedLocation ? 'current_saved' : 'current',
+    keyword: usedSavedLocation ? 'SAVED_LOCATION' : 'CURRENT_LOCATION',
     searchedLat: lat,
     searchedLng: lng,
-    resultLabel: areaLabel,
+    resultLabel: usedSavedLocation ? `${areaLabel}（前回保存位置）` : areaLabel,
     hitCount: hits.length
   });
 }
@@ -1342,11 +1443,23 @@ els.searchByAddress.addEventListener('click', async () => {
   }
 });
 
-     els.searchByCurrent.addEventListener('click', async () => {
+    els.searchByCurrent.addEventListener('click', async () => {
   try {
     await runByCurrentLocation();
+    updateCurrentLocationButtonUI();
   } catch (e) {
-    setSummary(e.message, false);
+    saveGeoPermissionState('failed');
+    updateCurrentLocationButtonUI();
+
+    if (isIphoneSafari()) {
+      setSummary(
+        '現在地を取得できませんでした。\niPhone の「設定」アプリまたは Safari の「Webサイトの設定」で、このページの位置情報を許可してから、もう一度お試しください。',
+        false
+      );
+    } else {
+      setSummary(e.message || '現在地を取得できませんでした。', false);
+    }
+
     setStatus('エラー');
   }
 });
@@ -1427,7 +1540,9 @@ async function tryAutoRunCurrentAfterReload() {
   }
 }
 
-    async function init() {
+updateCurrentLocationButtonUI();
+
+async function init() {
   try {
     setStatus('準備中です...');
     await loadGeojson();
@@ -1436,17 +1551,23 @@ async function tryAutoRunCurrentAfterReload() {
     setStatus('住所または現在地から判定してください。');
     setSummary('まだ判定していません。', false);
   } catch (e) {
-    setSummary(e.message, false);
+    setSummary(e.message || '初期化に失敗しました。', false);
     setStatus('エラー');
   }
 }
 
-init().then(() => {
-  setTimeout(() => {
-    map.invalidateSize();
-  }, 100);
+init();
 
-  tryAutoRunCurrentAfterReload();
+setTimeout(() => {
+  map.invalidateSize();
+}, 300);
+
+window.addEventListener('load', () => {
+  map.invalidateSize();
+});
+
+window.addEventListener('resize', () => {
+  map.invalidateSize();
 });
 
   </script>
