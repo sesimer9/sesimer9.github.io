@@ -1046,15 +1046,15 @@ if (els.showEmailCard) {
   });
 }
 
-const savedEmail = getSavedEmail();
-console.log('savedEmail=', savedEmail);
-const savedLocationInfo = getSavedLocationInfo();
+function applyInitialView() {
+  const savedEmail = getSavedEmail();
+  const savedLocationInfo = getSavedLocationInfo();
+  const hasSavedUser = !!(savedEmail && savedLocationInfo);
 
-if (savedEmail && savedLocationInfo) {
-  els.userEmail.value = savedEmail;
-  currentEmail = savedEmail;
+  if (hasSavedUser) {
+    els.userEmail.value = savedEmail;
+    currentEmail = savedEmail;
 
-  if (savedLocationInfo) {
     locationInfo = {
       lat: String(savedLocationInfo.lat || ''),
       lng: String(savedLocationInfo.lng || ''),
@@ -1062,18 +1062,27 @@ if (savedEmail && savedLocationInfo) {
       addressRaw: savedLocationInfo.addressRaw || '',
       areaLabel: savedLocationInfo.areaLabel || ''
     };
+
+    setEmailStatus('保存済みメールアドレスを読み込みました。', true);
+    els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
+    els.appBody.classList.remove('hidden');
+    els.emailCard.classList.add('hidden');
+  } else {
+    els.appBody.classList.add('hidden');
+    els.emailCard.classList.remove('hidden');
+    setEmailStatus('最初にメールアドレスを登録してください。', false);
   }
 
-  setEmailStatus('保存済みメールアドレスを読み込みました。', true);
-  els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
-  els.appBody.classList.remove('hidden');
-  els.emailCard.classList.add('hidden');
+  return hasSavedUser;
 }
+
+const hasSavedUser = applyInitialView();
 
 async function tryAutoRunCurrentAfterReload() {
   const lastMode = getLastMode();
   if (lastMode !== 'current') return;
   if (!currentEmail) return;
+  if (els.appBody.classList.contains('hidden')) return;
 
   setStatus('前回と同じく現在地で判定を試しています...');
 
@@ -1100,19 +1109,38 @@ updateCurrentLocationButtonUI();
 
 async function init() {
   try {
-    setStatus('準備中です...');
     await loadGeojson();
     renderAllRoutes();
     map.fitBounds(allLayer.getBounds().pad(0.05));
-    setStatus('住所または現在地から判定してください。');
-    setSummary('まだ判定していません。', false);
+
+    if (!els.appBody.classList.contains('hidden')) {
+      setStatus('住所または現在地から判定してください。');
+      setSummary('まだ判定していません。', false);
+    }
   } catch (e) {
-    setSummary(e.message || '初期化に失敗しました。', false);
-    setStatus('エラー');
+    if (!els.appBody.classList.contains('hidden')) {
+      setSummary(e.message || '初期化に失敗しました。', false);
+      setStatus('エラー');
+    } else {
+      setEmailStatus('最初にメールアドレスを登録してください。', false);
+    }
   }
 }
 
-init();
+if (hasSavedUser) {
+  init().then(() => {
+    tryAutoRunCurrentAfterReload();
+  });
+} else {
+  loadGeojson()
+    .then(() => {
+      renderAllRoutes();
+      if (allLayer) map.fitBounds(allLayer.getBounds().pad(0.05));
+    })
+    .catch((e) => {
+      console.error('initial geojson load failed', e);
+    });
+}
 
 setTimeout(() => {
   map.invalidateSize();
