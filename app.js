@@ -1047,6 +1047,9 @@ if (els.showEmailCard) {
 }
 
 function applyInitialView() {
+console.log('applyInitialView savedEmail =', getSavedEmail());
+console.log('applyInitialView savedLocationInfo =', getSavedLocationInfo());
+
   const savedEmail = getSavedEmail();
   const savedLocationInfo = getSavedLocationInfo();
   const hasSavedEmail = !!savedEmail;
@@ -1071,6 +1074,9 @@ function applyInitialView() {
     els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
     els.appBody.classList.remove('hidden');
     els.emailCard.classList.add('hidden');
+
+    console.log('emailCard class =', els.emailCard.className);
+    console.log('appBody class =', els.appBody.className);
     return true;
   }
 
@@ -1159,3 +1165,7 @@ window.addEventListener('load', () => {
 window.addEventListener('resize', () => {
   map.invalidateSize();
 });
+
+console.log('savedEmail =', getSavedEmail());
+console.log('savedLocationInfo =', getSavedLocationInfo());
+console.log('current href =', location.href);
