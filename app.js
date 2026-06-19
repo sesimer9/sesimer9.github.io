@@ -217,9 +217,17 @@ async function captureEmailWithLocation() {
   if (!validateEmail(email)) throw new Error('メールアドレスを入力してください。');
 
   currentEmail = email;
+  saveEmailLocally(email);
+
+  setEmailStatus(`登録しています: ${email}`);
+  els.leadText.textContent = '位置情報を取得しています。しばらくお待ちください。';
+  els.appBody.classList.remove('hidden');
+  els.emailCard.classList.add('hidden');
+  updateCurrentLocationButtonUI();
+
   locationInfo = null;
 
-    try {
+  try {
     const info = await getUserLocationInfo();
     locationInfo = {
       lat: String(info.userLat ?? ''),
@@ -230,9 +238,11 @@ async function captureEmailWithLocation() {
     };
     saveLocationInfoLocally(locationInfo);
     saveGeoPermissionState('granted');
+    setStatus('初期位置情報を取得しました。');
   } catch (e) {
     console.warn('location skipped', e);
     saveGeoPermissionState('failed');
+    setStatus('位置情報の取得に時間がかかっています。');
   }
 
   try {
@@ -257,13 +267,8 @@ async function captureEmailWithLocation() {
     console.error('email log send failed', e);
   }
 
-  saveEmailLocally(email);
-  els.eventTypeField.value = 'email_capture';
   setEmailStatus(`登録しました: ${email}`, true);
   els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
-  els.appBody.classList.remove('hidden');
-  els.emailCard.classList.add('hidden');
-  updateCurrentLocationButtonUI();
 }
 
 els.emailForm.addEventListener('submit', async function (e) {
