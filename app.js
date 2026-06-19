@@ -774,63 +774,34 @@ async function runByCurrentLocation(options = {}) {
   const forceRefresh = !!options.forceRefresh;
   saveLastMode('current');
 
-  let lat = null;
-  let lng = null;
-  let accuracy = null;
-  let areaLabel = '現在地付近';
-  let usedSavedLocation = false;
+  setStatus('現在地を取得しています...');
 
-  const savedLocationInfo = getSavedLocationInfo();
+  const currentPos = await getCurrentPositionAsync();
+  const lat = currentPos.coords.latitude;
+  const lng = currentPos.coords.longitude;
+  const accuracy = currentPos.coords.accuracy;
 
-  if (
-    !forceRefresh &&
-    savedLocationInfo &&
-    savedLocationInfo.lat &&
-    savedLocationInfo.lng
-  ) {
-    lat = Number(savedLocationInfo.lat);
-    lng = Number(savedLocationInfo.lng);
-    accuracy = Number(savedLocationInfo.accuracy || 0);
-    areaLabel = savedLocationInfo.areaLabel || savedLocationInfo.addressRaw || '前回保存した位置';
-    usedSavedLocation = true;
-    locationInfo = {
-      lat: String(savedLocationInfo.lat || ''),
-      lng: String(savedLocationInfo.lng || ''),
-      accuracy: String(savedLocationInfo.accuracy || ''),
-      addressRaw: savedLocationInfo.addressRaw || '',
-      areaLabel: savedLocationInfo.areaLabel || ''
-    };
-    setStatus('前回保存した位置で判定しています...');
-  } else {
-    setStatus('現在地を取得しています...');
+  let areaLabel = `現在地付近（精度 約${Math.round(accuracy)}m）`;
 
-    const currentPos = await getCurrentPositionAsync();
-    lat = currentPos.coords.latitude;
-    lng = currentPos.coords.longitude;
-    accuracy = currentPos.coords.accuracy;
-
-    areaLabel = `現在地付近（精度 約${Math.round(accuracy)}m）`;
-
-    try {
-      const rev = await reverseGeocodeGsi(lat, lng);
-      if (rev.areaLabel) {
-        areaLabel = `${rev.areaLabel}付近（現在地判定／精度 約${Math.round(accuracy)}m）`;
-      }
-    } catch (gsiErr) {
-      console.warn('GSI reverse geocode failed', gsiErr);
+  try {
+    const rev = await reverseGeocodeGsi(lat, lng);
+    if (rev.areaLabel) {
+      areaLabel = `${rev.areaLabel}付近（現在地判定／精度 約${Math.round(accuracy)}m）`;
     }
-
-    locationInfo = {
-      lat: String(lat ?? ''),
-      lng: String(lng ?? ''),
-      accuracy: String(accuracy ?? ''),
-      addressRaw: '',
-      areaLabel: areaLabel
-    };
-
-    saveLocationInfoLocally(locationInfo);
-    saveGeoPermissionState('granted');
+  } catch (gsiErr) {
+    console.warn('GSI reverse geocode failed', gsiErr);
   }
+
+  locationInfo = {
+    lat: String(lat ?? ''),
+    lng: String(lng ?? ''),
+    accuracy: String(accuracy ?? ''),
+    addressRaw: '',
+    areaLabel: areaLabel
+  };
+
+  saveLocationInfoLocally(locationInfo);
+  saveGeoPermissionState('granted');
 
   setStatus('GeoJSONを読み込んで判定しています...');
   await loadGeojson();
@@ -840,10 +811,7 @@ async function runByCurrentLocation(options = {}) {
   lastSearchLatLng = [lat, lng];
   renderHits(hits, lat, lng);
   renderResults(hits);
-  updateSummary(
-    hits,
-    usedSavedLocation ? `${areaLabel}（前回保存位置）` : areaLabel
-  );
+  updateSummary(hits, areaLabel);
 
   if (hits.length) {
     setStatus(`判定完了：${hits.length}件ヒットしました。`);
@@ -852,11 +820,61 @@ async function runByCurrentLocation(options = {}) {
   }
 
   await logSearchAction({
-    searchType: usedSavedLocation ? 'current_saved' : 'current',
-    keyword: usedSavedLocation ? 'SAVED_LOCATION' : 'CURRENT_LOCATION',
+    searchType: forceRefresh ? 'current_refresh' : 'current',
+    keyword: 'CURRENT_LOCATION',
     searchedLat: lat,
     searchedLng: lng,
-    resultLabel: usedSavedLocation ? `${areaLabel}（前回保存位置）` : areaLabel,
+    resultLabel: areaLabel,
+    hitCount: hits.length
+  });
+}
+
+async function runBySavedLocation(savedLocationInfo = null) {
+  saveLastMode('current');
+
+  const saved = savedLocationInfo || getSavedLocationInfo();
+  if (!saved || !saved.lat || !saved.lng) {
+    throw new Error('保存済み位置情報がありません。');
+  }
+
+  const lat = Number(saved.lat);
+  const lng = Number(saved.lng);
+  const accuracy = Number(saved.accuracy || 0);
+  const areaLabelBase =
+    saved.areaLabel || saved.addressRaw || '前回保存した位置';
+  const displayLabel = `${areaLabelBase}（前回保存位置）`;
+
+  locationInfo = {
+    lat: String(saved.lat || ''),
+    lng: String(saved.lng || ''),
+    accuracy: String(saved.accuracy || ''),
+    addressRaw: saved.addressRaw || '',
+    areaLabel: saved.areaLabel || ''
+  };
+
+  setStatus('前回保存した位置で判定しています...');
+
+  await loadGeojson();
+  renderAllRoutes();
+
+  const hits = judge(lat, lng);
+  lastSearchLatLng = [lat, lng];
+  renderHits(hits, lat, lng);
+  renderResults(hits);
+  updateSummary(hits, displayLabel);
+
+  if (hits.length) {
+    setStatus(`判定完了：${hits.length}件ヒットしました。`);
+  } else {
+    setStatus('判定完了：該当ルートは見つかりませんでした。');
+  }
+
+  await logSearchAction({
+    searchType: 'current_saved',
+    keyword: 'SAVED_LOCATION',
+    searchedLat: lat,
+    searchedLng: lng,
+    resultLabel: displayLabel,
     hitCount: hits.length
   });
 }
@@ -1091,29 +1109,26 @@ console.log('applyInitialView savedLocationInfo =', getSavedLocationInfo());
 const hasSavedUser = applyInitialView();
 
 async function tryAutoRunCurrentAfterReload() {
+  return; // ← いったん即returnさせる
   const lastMode = getLastMode();
   if (lastMode !== 'current') return;
   if (!currentEmail) return;
   if (els.appBody.classList.contains('hidden')) return;
 
-  setStatus('前回と同じく現在地で判定を試しています...');
+  const savedLocationInfo = getSavedLocationInfo();
+  if (!savedLocationInfo || !savedLocationInfo.lat || !savedLocationInfo.lng) {
+    setStatus('保存済み位置情報がないため、自動判定は行いません。');
+    return;
+  }
 
   try {
-    await runByCurrentLocation();
+    await runBySavedLocation(savedLocationInfo);
   } catch (e) {
-    setStatus('現在地の自動判定はできませんでした。');
-
-    if (isIphoneSafari()) {
-      setSummary(
-        '現在地の自動判定に失敗しました。\nSafariで aA → Webサイトの設定 → 位置情報 を「許可」にしてから、もう一度「現在地で判定」を押してください。',
-        false
-      );
-    } else {
-      setSummary(
-        '現在地の自動判定に失敗しました。\nもう一度「現在地で判定」を押してください。',
-        false
-      );
-    }
+    setStatus('保存済み位置での自動判定はできませんでした。');
+    setSummary(
+      '保存済み位置情報での自動判定に失敗しました。\n必要な場合だけ「現在地で判定」を押してください。',
+      false
+    );
   }
 }
 
