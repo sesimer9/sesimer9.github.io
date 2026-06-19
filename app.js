@@ -1047,33 +1047,21 @@ if (els.showEmailCard) {
 }
 
 function applyInitialView() {
-  const savedEmail = getSavedEmail();
-  const savedLocationInfo = getSavedLocationInfo();
-  const hasSavedUser = !!(savedEmail && savedLocationInfo);
+  els.appBody.classList.add('hidden');
 
-  if (hasSavedUser) {
-    els.userEmail.value = savedEmail;
-    currentEmail = savedEmail;
-
-    locationInfo = {
-      lat: String(savedLocationInfo.lat || ''),
-      lng: String(savedLocationInfo.lng || ''),
-      accuracy: String(savedLocationInfo.accuracy || ''),
-      addressRaw: savedLocationInfo.addressRaw || '',
-      areaLabel: savedLocationInfo.areaLabel || ''
-    };
-
-    setEmailStatus('保存済みメールアドレスを読み込みました。', true);
-    els.leadText.textContent = '判定結果は参考情報です。必ず地図を確認のうえ、ご自身で判断してください。';
-    els.appBody.classList.remove('hidden');
-    els.emailCard.classList.add('hidden');
-  } else {
-    els.appBody.classList.add('hidden');
+  if (els.emailCard) {
     els.emailCard.classList.remove('hidden');
-    setEmailStatus('最初にメールアドレスを登録してください。', false);
+    els.emailCard.style.display = 'block';
+    els.emailCard.style.visibility = 'visible';
+    els.emailCard.style.opacity = '1';
   }
 
-  return hasSavedUser;
+  currentEmail = '';
+  locationInfo = null;
+
+  setEmailStatus('最初にメールアドレスを登録してください。', false);
+
+  return false;
 }
 
 const hasSavedUser = applyInitialView();
