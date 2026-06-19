@@ -1039,13 +1039,17 @@ els.searchByAddress.addEventListener('click', async () => {
   }
 });
 
-    els.clearMap.addEventListener('click', () => {
+   els.clearMap.addEventListener('click', () => {
   clearHitLayers();
-  // この行は削除:
-  // els.resultsList.innerHTML = '<div class="mini">まだ結果はありません。</div>';
+  els.address.value = '';
   setSummary('まだ判定していません。', false);
   setStatus('クリアしました。');
-  if (allLayer) map.fitBounds(allLayer.getBounds().pad(0.05));
+
+  if (allLayer) {
+    map.fitBounds(allLayer.getBounds().pad(0.05));
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
 if (els.showEmailCard) {
