@@ -3,7 +3,9 @@
     const GEOJSON_FILES = [
   './routes_from_geojson5_100m.geojson',
   './routes_chiba_geojson5_100m.geojson',
-  './routes_gunma_geojson5_100m.geojson'
+  './routes_kanagawa_geojson5_100m.geojson',
+  './routes_gunma_geojson5_100m.geojson',
+  './routes_kyoto_geojson5_100m.geojson'
 ];
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyQDfeKj_P9jjszJYyY7EBnq_VbetBGcnDPiyuKvaPPLRpJ2Hw2J5dOzkn-aKNb841N/exec';
     
