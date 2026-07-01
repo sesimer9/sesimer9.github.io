@@ -8,16 +8,26 @@
   APIテスト中...
 
   <script>
-  fetch('https://secure02.blue.shared-server.net/www.sesim.co.jp/judge.php')
-    .then(r => r.json())
-    .then(data => {
-      console.log(data);
-      document.body.innerText = JSON.stringify(data, null, 2);
-    })
-    .catch(err => {
-      console.error(err);
-      document.body.innerText = 'エラー: ' + err.message;
-    });
-  </script>
+fetch('https://secure02.blue.shared-server.net/www.sesim.co.jp/judge.php', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  body: JSON.stringify({
+    lat: 35.6844,
+    lng: 139.7745
+  })
+})
+  .then(r => r.json())
+  .then(data => {
+    console.log(data);
+    document.body.innerText = JSON.stringify(data, null, 2);
+  })
+  .catch(err => {
+    console.error(err);
+    document.body.innerText = 'エラー: ' + err.message;
+  });
+</script>
 </body>
 </html>
