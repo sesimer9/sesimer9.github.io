@@ -1,31 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
   <title>APIテスト</title>
 </head>
 <body>
-  <h1>APIテスト</h1>
-  <button id="testApiBtn">judge.php を呼ぶ</button>
-  <pre id="apiResult">ここに結果が出ます</pre>
+  APIテスト中...
 
   <script>
-    document.getElementById('testApiBtn').addEventListener('click', async () => {
-      const resultEl = document.getElementById('apiResult');
-      resultEl.textContent = '通信中...';
-
-      try {
-        const res = await fetch('http://www.sesim.co.jp/judge.php', {
-          method: 'GET',
-          mode: 'cors'
-        });
-
-        const text = await res.text();
-        resultEl.textContent = text;
-      } catch (err) {
-        resultEl.textContent = 'エラー: ' + err.message;
-      }
+  fetch('https://secure02.blue.shared-server.net/www.sesim.co.jp/judge.php')
+    .then(r => r.json())
+    .then(data => {
+      console.log(data);
+      document.body.innerText = JSON.stringify(data, null, 2);
+    })
+    .catch(err => {
+      console.error(err);
+      document.body.innerText = 'エラー: ' + err.message;
     });
   </script>
 </body>
