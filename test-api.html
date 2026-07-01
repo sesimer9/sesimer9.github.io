@@ -21,12 +21,13 @@ fetch('https://secure02.blue.shared-server.net/www.sesim.co.jp/judge.php', {
 })
   .then(r => r.json())
   .then(data => {
-    console.log(data);
-    document.body.innerText = JSON.stringify(data, null, 2);
-  })
-  .catch(err => {
-    console.error(err);
-    document.body.innerText = 'エラー: ' + err.message;
+    if (data.hit) {
+      console.log('路線名:', data.matched?.display_name);
+      console.log('路線種別:', data.matched?.route_type);
+      console.log('区間:', data.matched?.section_text);
+    } else {
+      console.log('対象路線なし');
+    }
   });
 </script>
 </body>
