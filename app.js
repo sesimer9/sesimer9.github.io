@@ -1,27 +1,15 @@
 
     const YAHOO_APP_ID = 'dmVyPTIwMjUwNyZpZD1QMDdkaFFITFh1Jmhhc2g9TVRKaE0yVXhNVGhsWVdFMlpqQXhPUQ';
-    const GEOJSON_FILES = [
-  './routes_from_geojson5_100m.geojson',
-  './routes_chiba_geojson5_100m.geojson',
-  './routes_kanagawa_geojson5_100m.geojson',
-  './routes_gunma_geojson5_100m.geojson',
-  './routes_kyoto_geojson5_100m.geojson'
-];
+   
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyQDfeKj_P9jjszJYyY7EBnq_VbetBGcnDPiyuKvaPPLRpJ2Hw2J5dOzkn-aKNb841N/exec';
     
-
-    let routeGeojson = null;
-    let allLayer = null;
     let hitLayer = null;
     let pointLayer = null;
     let currentEmail = '';
     let locationInfo = null;
     let lastSearchLatLng = null;
 
-    const routeColors = {
-      polygon: '#e8891c',
-      line: '#01696f'
-    };
+    const routeLineColor = '#01696f';
 
     const map = L.map('map');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -180,6 +168,37 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+const supportedPrefectures = ['東京都', '千葉県', '埼玉県', '群馬県', '神奈川県', '京都府'];
+
+function isSupportedPrefecture(prefName) {
+  return supportedPrefectures.includes(String(prefName || '').trim());
+}
+
+function extractPrefectureFromText(text = '') {
+  const m = String(text).match(/(東京都|北海道|京都府|大阪府|.{2,3}県)/);
+  return m ? m[1] : '';
+}
+
+function extractPrefectureFromAddressElements(elements = []) {
+  for (const el of elements) {
+    const level = String(el.Level || '').trim().toLowerCase();
+    const name = String(el.Name || '').trim();
+    if (level === 'prefecture' && name) {
+      return name;
+    }
+  }
+  return '';
+}
+
+function extractPrefectureFromYahooFeature(feature) {
+  const property = feature && feature.Property ? feature.Property : {};
+  const elements = Array.isArray(property.AddressElement) ? property.AddressElement : [];
+  const fromElements = extractPrefectureFromAddressElements(elements);
+  if (fromElements) return fromElements;
+
+  const address = property.Address || feature.Name || '';
+  return extractPrefectureFromText(address);
+}
 
 async function getUserLocationInfo() {
   const pos = await getCurrentPositionAsync();
@@ -319,12 +338,17 @@ async function logSearchAction({
   };
 
   console.log('search payload =', payload);
-  await postEmailLog(payload);
+
+  try {
+    await postEmailLog(payload);
+  } catch (e) {
+    console.warn('search log send failed', e);
+  }
 }
 
-    function setStatus(msg) {
-      els.status.textContent = msg;
-    }
+function setStatus(msg) {
+  els.status.textContent = msg;
+}
 
     function setSummary(msg, ok) {
       els.summary.className = `result ${ok ? 'ok' : 'ng'}`;
@@ -348,25 +372,6 @@ async function logSearchAction({
       if (!message) throw new Error('内容を入力してください。');
     }
 
-    async function loadGeojson() {
-  if (routeGeojson) return routeGeojson;
-
-  const collections = await Promise.all(
-    GEOJSON_FILES.map(async (file) => {
-      const res = await fetch(file);
-      if (!res.ok) throw new Error(`GeoJSON読込失敗: ${file}`);
-      return await res.json();
-    })
-  );
-
-  routeGeojson = {
-    type: 'FeatureCollection',
-    features: collections.flatMap(c => Array.isArray(c.features) ? c.features : [])
-  };
-
-  return routeGeojson;
-}
-
 function pick(...values) {
   for (const v of values) {
     if (v !== undefined && v !== null && String(v).trim() !== '') {
@@ -374,6 +379,42 @@ function pick(...values) {
     }
   }
   return '';
+}
+
+function getMatchedRouteLabel(matched = {}) {
+  const commonName = String(matched.common_name || '').trim();
+  const displayName = String(matched.display_name || '').trim();
+  const officialRouteName = String(matched.official_route_name || '').trim();
+  const routeType = String(matched.route_type || '').trim();
+  const routeNo = String(matched.route_no || '').trim();
+
+  if (commonName) return commonName;
+  if (displayName) return displayName;
+  if (officialRouteName) return officialRouteName;
+  if (routeType && routeNo) return `${routeType}${routeNo}号`;
+  if (routeNo) return `路線 ${routeNo}`;
+  return '路線名不明';
+}
+
+function applyJudgeResult(data, displayLabel) {
+  if (data.hit) {
+    const name = getMatchedRouteLabel(data.matched);
+    setSummary(`${displayLabel}\n路線: ${name}`, true);
+    setStatus('判定完了：一致');
+    renderMatchedFeature(data.matched_feature || null);
+  } else if (data.nearest) {
+    const nearName = getMatchedRouteLabel(data.nearest);
+    setSummary(
+      `${displayLabel}\n路線: 該当なし\n参考路線: ${nearName}（約${data.nearest.distance_m}m）`,
+      false
+    );
+    setStatus('判定完了：一致なし');
+    renderMatchedFeature(data.nearest_feature || null);
+  } else {
+    setSummary(`${displayLabel}\n路線: 該当なし`, false);
+    setStatus('判定完了：一致なし');
+    renderMatchedFeature(null);
+  }
 }
 
 function normalizeProps(src = {}) {
@@ -431,104 +472,158 @@ function normalizeProps(src = {}) {
   };
 }
 
-    function styleForFeature(feature, hit = false) {
-      const p = normalizeProps(feature.properties);
-      const gt = (((feature.geometry && feature.geometry.type) || p.geometryType || '') + '').toUpperCase();
+function getGeometryBoundsSummary(feature) {
+  try {
+    if (!feature || !feature.geometry || !feature.geometry.coordinates) return null;
 
-      if (gt.includes('POLYGON')) {
-        return {
-          color: '#1d4ed8',
-          weight: hit ? 2.5 : 1.4,
-          fillColor: '#2563eb',
-          fillOpacity: hit ? 0.32 : 0.10,
-          opacity: hit ? 1 : 0.55
-        };
+    const coords = [];
+    const walk = arr => {
+      if (!Array.isArray(arr)) return;
+      if (
+        arr.length >= 2 &&
+        typeof arr[0] === 'number' &&
+        typeof arr[1] === 'number'
+      ) {
+        coords.push(arr);
+        return;
       }
+      for (const x of arr) walk(x);
+    };
+    walk(feature.geometry.coordinates);
 
-      return {
-        color: routeColors.line,
-        weight: hit ? 4 : 1.2,
-        opacity: hit ? 0.95 : 0.22
-      };
+    if (!coords.length) return { count: 0 };
+
+    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+
+    for (const pair of coords) {
+      const lng = Number(pair[0]);
+      const lat = Number(pair[1]);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
     }
 
-    function popupText(feature) {
-      const p = normalizeProps(feature.properties);
-      const gt = (feature.geometry && feature.geometry.type) || p.geometryType || 'UNKNOWN';
-      const bufferText = p.bufferM ? `<br>Buffer: ${p.bufferM}m` : '';
-      return `<strong>${p.masterId || 'NO-ID'}</strong><br>${p.displayName || '-'}<br>Geometry: ${gt}${bufferText}`;
-    }
-
-    function renderAllRoutes() {
-  if (allLayer) map.removeLayer(allLayer);
-  allLayer = L.geoJSON(routeGeojson, {
-    interactive: false,
-    style: f => styleForFeature(f, false)
-  }).addTo(map);
-}
-
-    function clearHitLayers() {
-      if (hitLayer) map.removeLayer(hitLayer);
-      if (pointLayer) map.removeLayer(pointLayer);
-    }
-
-    function renderHits(hits, lat, lng) {
-  clearHitLayers();
-
-  pointLayer = L.circleMarker([lat, lng], {
-    radius: 18,
-    color: '#ffffff',
-    weight: 2,
-    fillColor: '#b42318',
-    fillOpacity: 1
-  }).bindPopup(`入力地点<br>${lat}, ${lng}`).addTo(map);
-
-  if (hits.length) {
-    hitLayer = L.geoJSON({
-      type: 'FeatureCollection',
-      features: hits
-    }, {
-      interactive: false,
-      style: f => styleForFeature(f, true)
-    }).addTo(map);
-
-    map.setView([lat, lng], 19);
-  } else {
-    map.setView([lat, lng], 16);
+    return {
+      count: coords.length,
+      minLng,
+      maxLng,
+      minLat,
+      maxLat,
+      sample: coords.slice(0, 5)
+    };
+  } catch (e) {
+    return { error: e.message };
   }
 }
 
-    function featureMatches(point, feature) {
-      return turf.booleanPointInPolygon(point, feature);
+    function styleForFeature(feature, hit = false) {
+  const p = normalizeProps(feature && feature.properties ? feature.properties : {});
+  const gt = String(
+    ((feature && feature.geometry && feature.geometry.type) || p.geometryType || '')
+  ).toUpperCase();
+
+  const bufferM = String(p.bufferM || '').trim();
+  const is100mBuffer = bufferM === '100';
+
+  if (gt.includes('POLYGON')) {
+    if (!is100mBuffer) {
+      return {
+        stroke: false,
+        fill: false,
+        opacity: 0,
+        fillOpacity: 0
+      };
     }
 
-    function judge(lat, lng) {
-      const point = turf.point([lng, lat]);
-      return routeGeojson.features.filter(f => {
-        try {
-          return featureMatches(point, f);
-        } catch (e) {
-          return false;
-        }
-      });
-    }
+    return {
+      stroke: true,
+      color: routeLineColor,
+      weight: hit ? 3 : 2,
+      opacity: hit ? 0.9 : 0.6,
+      fill: true,
+      fillColor: '#2563eb',
+      fillOpacity: hit ? 0.18 : 0.10
+    };
+  }
 
-    function renderResults(hits) {
-  // 簡略版では一覧カードを表示しないので何もしない
+  if (gt.includes('LINE')) {
+    return {
+      color: routeLineColor,
+      weight: hit ? 4 : 2,
+      opacity: hit ? 0.95 : 0.45
+    };
+  }
+
+  return {
+    stroke: false,
+    fill: false,
+    opacity: 0,
+    fillOpacity: 0
+  };
 }
 
-    function updateSummary(hits, sourceLabel) {
-  if (hits.length) {
-    const first = normalizeProps(hits[0].properties || {});
-    setSummary(
-      `${sourceLabel}\n一致件数: ${hits.length}件\n路線: ${first.displayName}`,
-      true
-    );
-  } else {
-    setSummary(
-      `${sourceLabel}\n一致件数: 0件\n路線: 該当なし`,
-      false
-    );
+function renderMatchedFeature(feature) {
+  if (hitLayer) {
+    map.removeLayer(hitLayer);
+    hitLayer = null;
+  }
+
+  if (!feature || !feature.geometry) return;
+
+  const normalized = normalizeProps(feature.properties || {});
+  const geometryType = String(
+    ((feature.geometry && feature.geometry.type) || normalized.geometryType || '')
+  ).toUpperCase();
+
+  const isPolygon = geometryType.includes('POLYGON');
+  const isLine = geometryType.includes('LINE');
+  const is100mBuffer = String(normalized.bufferM || '').trim() === '100';
+
+  console.log('render geometryType =', geometryType);
+console.log('render bufferM =', normalized.bufferM);
+console.log('render feature props =', feature.properties);
+console.log('geometry coordinates sample =', feature?.geometry?.coordinates);
+console.log('boundsInfo =', getGeometryBoundsSummary(feature));
+
+  if (isPolygon && !is100mBuffer) {
+    console.warn('skip polygon because not 100m buffer', feature);
+    return;
+  }
+
+  if (!isPolygon && !isLine) {
+    console.warn('skip drawing unsupported geometry type', geometryType, feature);
+    return;
+  }
+
+  hitLayer = L.geoJSON(feature, {
+    interactive: false,
+    style: f => styleForFeature(f, true)
+  }).addTo(map);
+
+  if (hitLayer && hitLayer.eachLayer) {
+    hitLayer.eachLayer(layer => {
+      if (layer.bringToBack) {
+        layer.bringToBack();
+      }
+    });
+  }
+
+  if (pointLayer && pointLayer.bringToFront) {
+    pointLayer.bringToFront();
+  }
+}
+
+function clearHitLayers() {
+  if (hitLayer) {
+    map.removeLayer(hitLayer);
+    hitLayer = null;
+  }
+
+  if (pointLayer) {
+    map.removeLayer(pointLayer);
+    pointLayer = null;
   }
 }
 
@@ -574,6 +669,64 @@ const feature = data && data.Feature && data.Feature[0] ? data.Feature[0] : null
       return { lat, lng };
     }
 
+function normalizeSearchText(s = '') {
+  return String(s)
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[　]/g, '')
+    .replace(/（.*?）/g, '')
+    .replace(/\(.*?\)/g, '')
+    .toLowerCase();
+}
+
+function pickBestPlaceFeature(features, keyword) {
+  if (!Array.isArray(features) || !features.length) return null;
+
+  const q = normalizeSearchText(keyword);
+
+  const scored = features.map((f, index) => {
+    const name = normalizeSearchText(f?.Name || '');
+    const address = normalizeSearchText(f?.Property?.Address || '');
+    const station = normalizeSearchText(f?.Property?.Station || '');
+    let score = 0;
+
+    if (name === q) score += 100;
+    if (name.startsWith(q)) score += 80;
+    if (name.includes(q)) score += 60;
+    if (address.includes(q)) score += 30;
+    if (station.includes(q)) score += 20;
+
+    if (q.endsWith('駅') && name.endsWith('駅')) score += 25;
+    if (q.includes('中学校') && name.includes('中学校')) score += 25;
+    if (q.includes('小学校') && name.includes('小学校')) score += 25;
+    if (q.includes('高校') && name.includes('高校')) score += 25;
+    if (q.includes('大学') && name.includes('大学')) score += 25;
+    if (q.includes('川') && (name.includes('川') || address.includes('川'))) score += 20;
+    if (q.includes('橋') && (name.includes('橋') || address.includes('橋'))) score += 20;
+
+    if (!name) score -= 20;
+
+    return {
+      feature: f,
+      score,
+      index,
+      debug: {
+        name: f?.Name || '',
+        address: f?.Property?.Address || ''
+      }
+    };
+  });
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.index - b.index;
+  });
+
+  console.log('local search scored candidates =', scored);
+
+  return scored[0]?.feature || null;
+}
+
    function searchPlaceYahoo(keyword) {
   return new Promise((resolve, reject) => {
     const cb = 'yahooLocalSearchCallback_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
@@ -582,14 +735,21 @@ const feature = data && data.Feature && data.Feature[0] ? data.Feature[0] : null
     window[cb] = data => {
       cleanup();
 
-      const features = data && data.Feature ? data.Feature : [];
-      const first = Array.isArray(features) ? features[0] : null;
+      const features = Array.isArray(data?.Feature) ? data.Feature : [];
+      console.log('local search raw features =', features);
 
-      if (!first) {
-        return reject(new Error('駅名・施設名から場所を特定できませんでした。'));
+      if (!features.length) {
+        return reject(new Error('駅名・施設名・キーワードから場所を特定できませんでした。'));
       }
 
-      resolve(first);
+      const picked = pickBestPlaceFeature(features, keyword);
+
+      if (!picked) {
+        return reject(new Error('候補から場所を特定できませんでした。'));
+      }
+
+      console.log('local search picked feature =', picked);
+      resolve(picked);
     };
 
     function cleanup() {
@@ -599,11 +759,11 @@ const feature = data && data.Feature && data.Feature[0] ? data.Feature[0] : null
 
     script.onerror = () => {
       cleanup();
-      reject(new Error('駅名・施設名検索の取得に失敗しました。'));
+      reject(new Error('キーワード検索の取得に失敗しました。'));
     };
 
     script.src =
-      `https://map.yahooapis.jp/search/local/V1/localSearch?appid=${encodeURIComponent(YAHOO_APP_ID)}&query=${encodeURIComponent(keyword)}&results=1&output=json&callback=${encodeURIComponent(cb)}`;
+      `https://map.yahooapis.jp/search/local/V1/localSearch?appid=${encodeURIComponent(YAHOO_APP_ID)}&query=${encodeURIComponent(keyword)}&results=10&output=json&callback=${encodeURIComponent(cb)}`;
 
     document.body.appendChild(script);
   });
@@ -778,6 +938,34 @@ function searchNearbyYahoo(lat, lng, dist = 50) {
   });
 }
 
+async function judgeByApi(lat, lng) {
+  const res = await fetch(
+    'https://secure02.blue.shared-server.net/www.sesim.co.jp/judge.php',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ lat, lng })
+    }
+  );
+
+  let data = null;
+
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error('APIの応答がJSONではありません。');
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || 'API判定に失敗しました。');
+  }
+
+  return data;
+}
+
 async function runByCurrentLocation(options = {}) {
   const forceRefresh = !!options.forceRefresh;
   saveLastMode('current');
@@ -789,10 +977,12 @@ async function runByCurrentLocation(options = {}) {
   const lng = currentPos.coords.longitude;
   const accuracy = currentPos.coords.accuracy;
 
-  let areaLabel = `現在地付近（精度 約${Math.round(accuracy)}m）`;
+    let areaLabel = `現在地付近（精度 約${Math.round(accuracy)}m）`;
+  let prefecture = '';
 
   try {
     const rev = await reverseGeocodeGsi(lat, lng);
+    prefecture = rev.prefecture || '';
     if (rev.areaLabel) {
       areaLabel = `${rev.areaLabel}付近（現在地判定／精度 約${Math.round(accuracy)}m）`;
     }
@@ -808,33 +998,64 @@ async function runByCurrentLocation(options = {}) {
     areaLabel: areaLabel
   };
 
-  saveLocationInfoLocally(locationInfo);
+    saveLocationInfoLocally(locationInfo);
   saveGeoPermissionState('granted');
 
-  setStatus('GeoJSONを読み込んで判定しています...');
-  await loadGeojson();
-  renderAllRoutes();
+  clearHitLayers();
 
-  const hits = judge(lat, lng);
+  pointLayer = L.circleMarker([lat, lng], {
+    radius: 18,
+    color: '#ffffff',
+    weight: 2,
+    fillColor: '#b42318',
+    fillOpacity: 1
+  }).bindPopup(`現在地<br>${areaLabel}`).addTo(map);
+
+  map.setView([lat, lng], 11);
   lastSearchLatLng = [lat, lng];
-  renderHits(hits, lat, lng);
-  renderResults(hits);
-  updateSummary(hits, areaLabel);
 
-  if (hits.length) {
-    setStatus(`判定完了：${hits.length}件ヒットしました。`);
-  } else {
-    setStatus('判定完了：該当ルートは見つかりませんでした。');
+  if (prefecture && !isSupportedPrefecture(prefecture)) {
+    setSummary(`${prefecture}はまだ判定対象外です。`, false);
+    setStatus('判定対象外');
+
+    logSearchAction({
+      searchType: forceRefresh ? 'current_refresh_unsupported' : 'current_unsupported',
+      keyword: 'CURRENT_LOCATION',
+      searchedLat: lat,
+      searchedLng: lng,
+      resultLabel: prefecture,
+      hitCount: 0
+    }).catch(err => console.warn('logSearchAction failed', err));
+
+    return;
   }
 
-  await logSearchAction({
-    searchType: forceRefresh ? 'current_refresh' : 'current',
-    keyword: 'CURRENT_LOCATION',
-    searchedLat: lat,
-    searchedLng: lng,
-    resultLabel: areaLabel,
-    hitCount: hits.length
-  });
+  setStatus('APIで判定しています...');
+
+  const data = await judgeByApi(lat, lng);
+
+console.log('matched feature full =', JSON.stringify(data?.matched_feature, null, 2));
+console.log('matched feature bounds check =', getGeometryBoundsSummary(data?.matched_feature));
+
+console.log('judge response =', data);
+console.log('matched geometry type =', data?.debug_matched_geometry_type);
+console.log('matched buffer =', data?.debug_matched_buffer_m);
+console.log('matched feature =', data?.matched_feature);
+console.log('nearest feature =', data?.nearest_feature);
+
+const zoom = data.hit ? 19 : data.nearest ? 17 : 16;
+map.setView([lat, lng], zoom);
+
+applyJudgeResult(data, areaLabel);
+
+logSearchAction({
+  searchType: forceRefresh ? 'current_refresh' : 'current',
+  keyword: 'CURRENT_LOCATION',
+  searchedLat: lat,
+  searchedLng: lng,
+  resultLabel: areaLabel,
+  hitCount: data.hit ? 1 : 0
+}).catch(err => console.warn('logSearchAction failed', err));
 }
 
 async function runBySavedLocation(savedLocationInfo = null) {
@@ -847,85 +1068,176 @@ async function runBySavedLocation(savedLocationInfo = null) {
 
   const lat = Number(saved.lat);
   const lng = Number(saved.lng);
-  const accuracy = Number(saved.accuracy || 0);
-  const areaLabelBase =
-    saved.areaLabel || saved.addressRaw || '前回保存した位置';
-  const displayLabel = `${areaLabelBase}（前回保存位置）`;
+
+  let displayLabel = saved.areaLabel || saved.addressRaw || '現在地';
+  let prefecture = '';
+
+  try {
+    const rev = await reverseGeocodeGsi(lat, lng);
+    prefecture = rev.prefecture || '';
+    if (rev.areaLabel) {
+      displayLabel = rev.areaLabel;
+    }
+  } catch (gsiErr) {
+    console.warn('GSI reverse geocode failed (saved)', gsiErr);
+  }
 
   locationInfo = {
     lat: String(saved.lat || ''),
     lng: String(saved.lng || ''),
     accuracy: String(saved.accuracy || ''),
     addressRaw: saved.addressRaw || '',
-    areaLabel: saved.areaLabel || ''
+    areaLabel: displayLabel || ''
   };
 
-  setStatus('前回保存した位置で判定しています...');
-
-  await loadGeojson();
-  renderAllRoutes();
-
-  const hits = judge(lat, lng);
   lastSearchLatLng = [lat, lng];
-  renderHits(hits, lat, lng);
-  renderResults(hits);
-  updateSummary(hits, displayLabel);
 
-  if (hits.length) {
-    setStatus(`判定完了：${hits.length}件ヒットしました。`);
-  } else {
-    setStatus('判定完了：該当ルートは見つかりませんでした。');
+  clearHitLayers();
+
+  pointLayer = L.circleMarker([lat, lng], {
+    radius: 18,
+    color: '#ffffff',
+    weight: 2,
+    fillColor: '#b42318',
+    fillOpacity: 1
+  }).bindPopup(`現在地<br>${displayLabel}`).addTo(map);
+
+  map.setView([lat, lng], 11);
+
+  if (prefecture && !isSupportedPrefecture(prefecture)) {
+    setSummary(`${prefecture}はまだ判定対象外です。`, false);
+    setStatus('判定対象外');
+
+    logSearchAction({
+      searchType: 'current_saved_unsupported',
+      keyword: 'SAVED_LOCATION',
+      searchedLat: lat,
+      searchedLng: lng,
+      resultLabel: prefecture,
+      hitCount: 0
+    }).catch(err => console.warn('logSearchAction failed', err));
+
+    return;
   }
 
-  await logSearchAction({
+  setStatus('APIで判定しています...');
+
+  const data = await judgeByApi(lat, lng);
+
+console.log('judge response =', data);
+console.log('matched geometry type =', data?.debug_matched_geometry_type);
+console.log('matched buffer =', data?.debug_matched_buffer_m);
+console.log('matched feature =', data?.matched_feature);
+console.log('nearest feature =', data?.nearest_feature);
+
+  const zoom = data.hit ? 19 : data.nearest ? 17 : 16;
+  map.setView([lat, lng], zoom);
+
+  applyJudgeResult(data, displayLabel);
+
+  logSearchAction({
     searchType: 'current_saved',
     keyword: 'SAVED_LOCATION',
     searchedLat: lat,
     searchedLng: lng,
     resultLabel: displayLabel,
-    hitCount: hits.length
-  });
+    hitCount: data.hit ? 1 : 0
+  }).catch(err => console.warn('logSearchAction failed', err));
 }
 
     async function runByAddress() {
   const keyword = els.address.value.trim();
-  if (!keyword) throw new Error('住所・駅名・施設名を入力してください。');
+  if (!keyword) throw new Error('住所・駅名・施設名・学校名・川などのキーワードを入力してください。');
 
   saveLastMode('address');
-  setStatus('GeoJSON 読み込み中…');
-  await loadGeojson();
-  renderAllRoutes();
+  setStatus('場所を検索しています...');
 
-  let lat, lng, display;
+  let lat, lng, display, prefecture = '';
+  let foundFeature = null;
+  let resolvedBy = '';
 
   try {
     const feature = await geocodeAddressYahoo(keyword);
+    foundFeature = feature;
+    resolvedBy = 'geocoder';
     ({ lat, lng } = parseYahooCoordinates(feature));
     display =
       (feature && feature.Property ? feature.Property.Address : '') ||
       (feature ? feature.Name : '') ||
       keyword;
+    prefecture = extractPrefectureFromYahooFeature(feature);
   } catch (addressErr) {
+    console.warn('geocodeAddressYahoo failed, fallback to localSearch', addressErr);
+
     const placeFeature = await searchPlaceYahoo(keyword);
+    foundFeature = placeFeature;
+    resolvedBy = 'localSearch';
     ({ lat, lng } = parseYahooPlaceCoordinates(placeFeature));
-    display = (placeFeature ? placeFeature.Name : '') || keyword;
+    display =
+      (placeFeature && placeFeature.Name ? placeFeature.Name : '') ||
+      (placeFeature && placeFeature.Property ? placeFeature.Property.Address : '') ||
+      keyword;
+    prefecture = extractPrefectureFromYahooFeature(placeFeature);
   }
 
-  const hits = judge(lat, lng);
-  lastSearchLatLng = [lat, lng];
-  renderHits(hits, lat, lng);
-  renderResults(hits);
-  updateSummary(hits, display);
-  setStatus('');
+  console.log('runByAddress resolvedBy =', resolvedBy);
+  console.log('runByAddress foundFeature =', foundFeature);
 
-  await logSearchAction({
-    searchType: 'address',
+  lastSearchLatLng = [lat, lng];
+
+  clearHitLayers();
+
+  pointLayer = L.circleMarker([lat, lng], {
+    radius: 18,
+    color: '#ffffff',
+    weight: 2,
+    fillColor: '#b42318',
+    fillOpacity: 1
+  }).bindPopup(`検索地点<br>${display}`).addTo(map);
+
+  map.setView([lat, lng], 11);
+
+  if (prefecture && !isSupportedPrefecture(prefecture)) {
+    setSummary(`${display}\n${prefecture}はまだ判定対象外です。`, false);
+    setStatus('判定対象外');
+
+    logSearchAction({
+      searchType: resolvedBy === 'geocoder' ? 'address_unsupported' : 'keyword_unsupported',
+      keyword,
+      searchedLat: String(lat),
+      searchedLng: String(lng),
+      resultLabel: `${display} / ${prefecture}`,
+      hitCount: 0
+    }).catch(err => console.warn('logSearchAction failed', err));
+
+    return;
+  }
+
+  setStatus('APIで判定しています...');
+
+  const data = await judgeByApi(lat, lng);
+
+  console.log('matched feature full =', JSON.stringify(data?.matched_feature, null, 2));
+  console.log('matched feature bounds check =', getGeometryBoundsSummary(data?.matched_feature));
+  console.log('judge response =', data);
+  console.log('matched geometry type =', data?.debug_matched_geometry_type);
+  console.log('matched buffer =', data?.debug_matched_buffer_m);
+  console.log('matched feature =', data?.matched_feature);
+  console.log('nearest feature =', data?.nearest_feature);
+
+  const zoom = data.hit ? 19 : data.nearest ? 17 : 16;
+  map.setView([lat, lng], zoom);
+
+  applyJudgeResult(data, display);
+
+  logSearchAction({
+    searchType: resolvedBy === 'geocoder' ? 'address' : 'keyword',
     keyword,
     searchedLat: String(lat),
     searchedLng: String(lng),
     resultLabel: display,
-    hitCount: String(hits.length)
-  });
+    hitCount: data.hit ? 1 : 0
+  }).catch(err => console.warn('logSearchAction failed', err));
 }
 
 let clickAddressMarker = null;
@@ -1025,33 +1337,12 @@ els.searchByAddress.addEventListener('click', async () => {
   }
 });
 
-    els.showAll.addEventListener('click', async () => {
-  try {
-    await loadGeojson();
-    renderAllRoutes();
-
-    if (lastSearchLatLng) {
-      map.setView(lastSearchLatLng, 14);
-      setStatus('検索地点を中心に広く表示しました。');
-    } else if (allLayer) {
-      map.fitBounds(allLayer.getBounds().pad(0.02));
-      setStatus('広く表示しました。');
-    }
-  } catch (e) {
-    setSummary(e.message, false);
-  }
-});
-
    els.clearMap.addEventListener('click', () => {
   clearHitLayers();
   els.address.value = '';
   setSummary('まだ判定していません。', false);
   setStatus('クリアしました。');
-
-  if (allLayer) {
-    map.fitBounds(allLayer.getBounds().pad(0.05));
-  }
-
+  map.setView([35.68, 139.76], 11);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
@@ -1146,39 +1437,31 @@ async function tryAutoRunCurrentAfterReload() {
 
 updateCurrentLocationButtonUI();
 
-async function init() {
-  try {
-    await loadGeojson();
-    renderAllRoutes();
-    map.fitBounds(allLayer.getBounds().pad(0.05));
-
-    if (!els.appBody.classList.contains('hidden')) {
-      setStatus('住所または現在地から判定してください。');
-      setSummary('まだ判定していません。', false);
-    }
-  } catch (e) {
-    if (!els.appBody.classList.contains('hidden')) {
-      setSummary(e.message || '初期化に失敗しました。', false);
-      setStatus('エラー');
+if (els.showAll) {
+  els.showAll.addEventListener('click', () => {
+    if (lastSearchLatLng) {
+      map.setView(lastSearchLatLng, 14);
+      setStatus('検索地点を中心に広く表示しました。');
     } else {
-      setEmailStatus('最初にメールアドレスを登録してください。', false);
+      map.setView([35.68, 139.76], 11);
+      setStatus('広く表示する対象がないため、初期表示に戻しました。');
     }
+  });
+}
+
+function init() {
+  map.setView([35.68, 139.76], 11);
+
+  if (!els.appBody.classList.contains('hidden')) {
+    setStatus('住所または現在地から判定してください。');
+    setSummary('まだ判定していません。', false);
   }
 }
 
+init();
+
 if (hasSavedUser) {
-  init().then(() => {
-    tryAutoRunCurrentAfterReload();
-  });
-} else {
-  loadGeojson()
-    .then(() => {
-      renderAllRoutes();
-      if (allLayer) map.fitBounds(allLayer.getBounds().pad(0.05));
-    })
-    .catch((e) => {
-      console.error('initial geojson load failed', e);
-    });
+  tryAutoRunCurrentAfterReload();
 }
 
 setTimeout(() => {
@@ -1196,3 +1479,4 @@ window.addEventListener('resize', () => {
 console.log('savedEmail =', getSavedEmail());
 console.log('savedLocationInfo =', getSavedLocationInfo());
 console.log('current href =', location.href);
+
