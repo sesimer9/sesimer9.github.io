@@ -223,7 +223,7 @@ function escapeHtml(text = '') {
 }
 
 function getPrefButtonLabel(pref = '') {
-  return String(pref).replace(/都|道|府|県$/, '');
+  return String(pref).replace(/都|府|県$/, '');
 }
 
 function renderPrefectureLinks() {
