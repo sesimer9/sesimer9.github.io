@@ -330,3 +330,139 @@ iframe.hidden-frame{
 #emailCard{
   outline: 1px solid #d8d4cc;
 }
+
+.prefecture-card{
+  margin-top:14px;
+}
+
+.prefecture-card .mini{
+  margin-top:6px;
+  margin-bottom:0;
+}
+
+.prefecture-links{
+  display:grid;
+  gap:12px;
+  margin-top:14px;
+}
+
+.pref-group{
+  display:grid;
+  grid-template-columns:110px 1fr;
+  gap:12px;
+  align-items:start;
+}
+
+.pref-group-label{
+  font-size:.92rem;
+  font-weight:700;
+  color:var(--text);
+  line-height:1.6;
+  padding-top:5px;
+}
+
+.pref-group-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.pref-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:88px;
+  min-height:38px;
+  padding:8px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--text);
+  font-size:.9rem;
+  font-weight:700;
+  line-height:1;
+  text-decoration:none;
+  transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease;
+}
+
+.pref-btn:hover{
+  transform:translateY(-1px);
+}
+
+.pref-btn-supported{
+  background:#334155;
+  border-color:#334155;
+  color:#fff;
+}
+
+.pref-btn-supported:hover{
+  background:#1f2937;
+  border-color:#1f2937;
+}
+
+.pref-btn-unsupported{
+  background:#f8fafc;
+  border-color:#cbd5e1;
+  color:#475569;
+}
+
+.pref-btn-unsupported:disabled{
+  opacity:1;
+  cursor:not-allowed;
+}
+
+.pref-btn-unsupported:disabled:hover{
+  background:#f8fafc;
+  border-color:#cbd5e1;
+  color:#475569;
+  transform:none;
+}
+
+.prefecture-legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:14px;
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid var(--border);
+}
+
+.legend-item{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:.82rem;
+  color:var(--muted);
+}
+
+.legend-dot{
+  display:inline-block;
+  width:10px;
+  height:10px;
+  border-radius:999px;
+}
+
+.legend-dot-supported{
+  background:#334155;
+}
+
+.legend-dot-unsupported{
+  background:#cbd5e1;
+}
+
+@media (max-width:980px){
+  .pref-group{
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+
+  .pref-group-label{
+    padding-top:0;
+  }
+
+  .pref-btn{
+    min-width:76px;
+    min-height:36px;
+    font-size:.84rem;
+  }
+}
