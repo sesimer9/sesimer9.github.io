@@ -169,7 +169,7 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-const supportedPrefectures = ['東京都', '千葉県', '埼玉県', '群馬県', '神奈川県', '京都府'];
+const supportedPrefectures = ['東京都', '千葉県', '埼玉県', '群馬県', '神奈川県', '京都府', '島根県'];
 
 function isSupportedPrefecture(prefName) {
   return supportedPrefectures.includes(String(prefName || '').trim());
@@ -203,14 +203,54 @@ const prefectureGroups = [
 ];
 
 const prefectureOfficialLinks = {
+　'北海道': 'https://www.police.pref.hokkaido.lg.jp/info/seian/koutu_keibigyou/koutu_keibi.html',
+　'青森県': 'https://www.police.pref.aomori.jp/seianbu/seian_kikaku/eigyoukakari/keibigyo/keibigyo_img/osirase/R8_haitirosenhennkou.pdf',
+　'岩手県': 'https://www.pref.iwate.jp/kenkei/_res/projects/project_kenkei/_page_/003/002/713/s_r8ninteirosen.pdf',
+　'宮城県': 'https://www.police.pref.miyagi.jp/seian/kyoninka/keibiin/keibiin_rosen.html',
+　'秋田県': 'https://www.police.pref.akita.lg.jp/uploads/contents/pages_0000000319_00/%E5%88%A5%E6%B7%BB%E3%83%81%E3%83%A9%E3%82%B7.pdf',
+　'山形県': 'https://cdn.goope.jp/43560/260430110337-69f2b87976bdf.pdf',
+　'福島県': 'https://www.police.pref.fukushima.jp/03.tetuduki/-seian/keibihourei/kisokuhenkou.pdf',
+　'茨城県': 'https://www.pref.ibaraki.jp/kenkei/a06_shinsei/guard/work1704/documents/koujibunn.pdf',
   '栃木県': 'https://www.pref.tochigi.lg.jp/keisatu/n13/documents/20231129143357.pdf',
   '群馬県': 'https://www.pref.gunma.jp/uploaded/attachment/674320.pdf',
   '埼玉県': 'https://www.police.pref.saitama.lg.jp/documents/3506/r7koutuuyuudoukeibigyoumurosen.pdf',
   '千葉県': 'https://www.police.pref.chiba.jp/content/common/000012860.pdf',
   '東京都': 'https://www.keishicho.metro.tokyo.lg.jp/tetsuzuki/keibi/k_keibi/board.files/kotsu_keibi.pdf',
   '神奈川県': 'https://www.police.pref.kanagawa.jp/tetsuzuki/eigyokankei/keibi/mesd0094.html',
-  '茨城県': 'https://www.pref.ibaraki.jp/kenkei/a06_shinsei/guard/work1704/documents/koujibunn.pdf',
-  '京都府': 'https://www.pref.kyoto.jp/fukei/site/seiki_b/osirase/index.html'
+  '新潟県': 'https://www.pref.niigata.lg.jp/site/kenkei/tetuzuki-keibigyou-1-25keibigyou1-keibigyou25-1-keibigyou25-1.html',
+　'富山県': 'https://police.pref.toyama.jp/6108/tetsuzuki/kyoninka/20250601.html',
+　'石川県': 'https://www2.police.pref.ishikawa.lg.jp/application/application09/application29.html.html',
+　'福井県': 'https://www.pref.fukui.lg.jp/jyoureikisoku/testa/reiki_honbun/i201RG00001138.html',
+　'山梨県': 'https://www.pref.yamanashi.jp/documents/70129/oshirase3-5.pdf',
+　'長野県': 'https://www.pref.nagano.lg.jp/police/shinsei/seian/seianki/keibigyo/keibigyo.html',
+　'岐阜県': 'https://www.pref.gifu.lg.jp/uploaded/attachment/18346.pdf',
+　'静岡県': 'https://www.pref.shizuoka.jp/police/shinse/seikatsu/kotsuyudo.html',
+　'愛知県': 'https://www.pref.aichi.jp/police/shinsei/keibi/images/R7siteirosenn.pdf',
+　'三重県': 'https://www.police.pref.mie.jp/procedures/keibi/keibiin.pdf',
+　'滋賀県': 'https://www.pref.shiga.lg.jp/site/jourei/reiki_int/reiki_honbun/k001RG00001583.html',
+　'静岡県': 'https://www.pref.shizuoka.jp/police/shinse/seikatsu/kotsuyudo.html',
+　'京都府': 'https://www.pref.kyoto.jp/fukei/site/seiki_b/osirase/index.html',
+　'大阪府': 'https://www.police.pref.osaka.lg.jp/material/files/group/2/nintei_douro_r0710.pdf',
+　'兵庫県': 'https://www.police.pref.hyogo.lg.jp/tetuduki/keibigyou/data/R3ninteirosen.pdf',
+　'奈良県': 'https://www.police.pref.nara.jp/cmsfiles/contents/0000000/414/kouji22_201502.pdf',
+　'和歌山県': 'https://www.police.pref.wakayama.lg.jp/03_soudan/keibiin_haichi2/documents/1chirashi.pdf',
+　'鳥取県': 'http://www.torikeikyo.jp/wordpress/wp-content/uploads/2015/04/%E4%BA%A4%E9%80%9A%E8%AA%98%E5%B0%8E%E8%AD%A6%E5%82%99%E6%A5%AD%E5%8B%99%E6%A4%9C%E5%AE%9A%E3%83%91%E3%83%B3%E3%83%95%E3%83%AC%E3%83%83%E3%83%88.pdf',
+　'島根県': 'http://www.shimane-ssa.or.jp/03std/kuohoubunsyuusei.pdf',
+　'岡山県': 'https://www.pref.okayama.jp/uploaded/life/682125_9300924_misc.pdf',
+　'広島県': 'https://www.pref.hiroshima.lg.jp/uploaded/attachment/406146.pdf',
+　'山口県': 'https://www.pref.yamaguchi.lg.jp/uploaded/attachment/228278.pdf',
+　'徳島県': 'https://www.police.pref.tokushima.jp/wp-content/uploads/post45369/u3t20251030ckawc18.pdf',
+　'香川県': 'https://www.pref.kagawa.lg.jp/documents/15484/20260512_seiki_douroninteidf.pdf',
+　'愛媛県': 'https://www.police.pref.ehime.jp/seikan/keibiinhaichi.pdf',
+　'高知県': 'https://www.police.pref.kochi.lg.jp/docs/2023103000362/',
+　'福岡県': 'https://www.police.pref.fukuoka.jp/data/open/cnt/3/599/1/ichirannhyou.pdf?20190417171932',
+　'佐賀県': 'https://www.police.pref.saga.jp/var/rev0/0019/0816/20183289172.pdf',
+　'長崎県': 'https://www.police.pref.nagasaki.jp/police/shinsei/keibigyo-yoshiki/haibi/',
+　'熊本県': 'https://www.pref.kumamoto.jp/uploaded/attachment/274891.pdf',
+　'大分県': 'https://www.pref.oita.jp/uploaded/attachment/2022588.pdf',
+  '宮崎県': 'https://www.pref.miyazaki.lg.jp/police/anzen/seikatsuanzenbu/20230627082149.html',
+  '鹿児島県': 'https://www.pref.kagoshima.jp/ja09/documents/106033_20230518095734-1.pdf',
+　'沖縄県': 'https://www.police.pref.okinawa.jp/docs/2015040800013/file_contents/R8_kokuzi_47.pdf'
 };
 
 function escapeHtml(text = '') {
@@ -1346,14 +1386,28 @@ map.on('click', async function (e) {
   const lat = e.latlng.lat;
   const lng = e.latlng.lng;
 
-  setStatus('クリック地点の住所を取得しています...');
+  setStatus('クリック地点の住所と判定を取得しています...');
 
   let addressText = '';
+  let judgeText = '判定できませんでした。';
+  let routeText = '路線は該当なし';
+  let prefecture = '';
 
   try {
+    // 先に住所取得して都道府県を判定
     try {
       const revYahoo = await reverseGeocodeYahoo(lat, lng);
       addressText = revYahoo.address || '';
+
+      const raw = revYahoo.raw || null;
+      const elements =
+        raw && raw.Property && Array.isArray(raw.Property.AddressElement)
+          ? raw.Property.AddressElement
+          : [];
+
+      prefecture =
+        extractPrefectureFromAddressElements(elements) ||
+        extractPrefectureFromText(addressText);
     } catch (errYahoo) {
       console.warn('Yahoo reverse failed', errYahoo);
     }
@@ -1361,6 +1415,7 @@ map.on('click', async function (e) {
     if (!addressText) {
       try {
         const revGsi = await reverseGeocodeGsi(lat, lng);
+        prefecture = revGsi.prefecture || '';
         addressText =
           [revGsi.prefecture, revGsi.city, revGsi.townName].filter(Boolean).join('') ||
           revGsi.areaLabel ||
@@ -1374,21 +1429,29 @@ map.on('click', async function (e) {
       addressText = '住所を取得できませんでした。';
     }
 
-    if (clickAddressMarker) {
-      map.removeLayer(clickAddressMarker);
+    // 対象外なら API 判定しない
+    if (prefecture && !isSupportedPrefecture(prefecture)) {
+      judgeText = '対象外地域';
+      routeText = `${prefecture}はまだ判定対象外です。`;
+    } else {
+      try {
+        const data = await judgeByApi(lat, lng);
+        console.log('click judge response =', data);
+
+        if (data.hit) {
+          const routeName = getMatchedRouteLabel(data.matched || {});
+          judgeText = '一致';
+          routeText = `路線は「${routeName}」`;
+        } else {
+          judgeText = '一致なし';
+          routeText = '路線は該当なし';
+        }
+      } catch (errJudge) {
+        console.warn('click judge failed', errJudge);
+        judgeText = '判定エラー';
+        routeText = '路線は取得できませんでした';
+      }
     }
-
-    clickAddressMarker = L.marker([lat, lng]).addTo(map);
-clickAddressMarker.bindPopup(
-  `<strong>クリック地点</strong><br>` +
-  `<span style="font-size:12px;color:#666;">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br><br>` +
-  `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener noreferrer">Googleマップで開く</a><br>` +
-  `<a href="https://map.yahoo.co.jp/place?lat=${lat}&lon=${lng}" target="_blank" rel="noopener noreferrer">Yahoo!マップで開く</a>`
-).openPopup();
-
-    setStatus('クリック地点の住所を表示しました。');
-  } catch (err) {
-    console.error('click reverse failed', err);
 
     if (clickAddressMarker) {
       map.removeLayer(clickAddressMarker);
@@ -1397,13 +1460,32 @@ clickAddressMarker.bindPopup(
     clickAddressMarker = L.marker([lat, lng]).addTo(map);
     clickAddressMarker.bindPopup(
       `<strong>クリック地点</strong><br>` +
-      `住所を取得できませんでした。<br>` +
+      `${judgeText}<br>` +
+      `${routeText}<br><br>` +
+      `<span style="font-size:12px;color:#666;">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>` +
+      `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener noreferrer">Googleマップで開く</a><br>` +
+      `<a href="https://map.yahoo.co.jp/place?lat=${lat}&lon=${lng}" target="_blank" rel="noopener noreferrer">Yahoo!マップで開く</a>`
+    ).openPopup();
+
+    setStatus('クリック地点の住所と判定を表示しました。');
+  } catch (err) {
+    console.error('click reverse/judge failed', err);
+
+    if (clickAddressMarker) {
+      map.removeLayer(clickAddressMarker);
+    }
+
+    clickAddressMarker = L.marker([lat, lng]).addTo(map);
+    clickAddressMarker.bindPopup(
+      `<strong>クリック地点</strong><br>` +
+      `${judgeText}<br>` +
+      `${routeText}<br><br>` +
       `<span style="font-size:12px;color:#666;">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br><br>` +
       `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener noreferrer">Googleマップで開く</a><br>` +
       `<a href="https://map.yahoo.co.jp/place?lat=${lat}&lon=${lng}" target="_blank" rel="noopener noreferrer">Yahoo!マップで開く</a>`
     ).openPopup();
 
-    setStatus('クリック地点の住所を取得できませんでした。');
+    setStatus('クリック地点の判定を表示しました。');
   }
 });
 
@@ -1438,11 +1520,21 @@ els.searchByAddress.addEventListener('click', async () => {
 });
 
    els.clearMap.addEventListener('click', () => {
+  const center = map.getCenter();
+
   clearHitLayers();
+
+  if (clickAddressMarker) {
+    map.removeLayer(clickAddressMarker);
+    clickAddressMarker = null;
+  }
+
   els.address.value = '';
+
+  lastSearchLatLng = [center.lat, center.lng];
+
   setSummary('まだ判定していません。', false);
-  setStatus('クリアしました。');
-  map.setView([35.68, 139.76], 11);
+  setStatus('判定結果をクリアしました。');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
@@ -1539,13 +1631,9 @@ updateCurrentLocationButtonUI();
 
 if (els.showAll) {
   els.showAll.addEventListener('click', () => {
-    if (lastSearchLatLng) {
-      map.setView(lastSearchLatLng, 14);
-      setStatus('検索地点を中心に広く表示しました。');
-    } else {
-      map.setView([35.68, 139.76], 11);
-      setStatus('広く表示する対象がないため、初期表示に戻しました。');
-    }
+    const center = map.getCenter();
+    map.setView([center.lat, center.lng], 14);
+    setStatus('現在表示中の地点を中心に広く表示しました。');
   });
 }
 
