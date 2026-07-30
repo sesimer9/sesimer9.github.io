@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>交通誘導員の検定配置路線を住所から判定｜参考版案内ページ</title>
-  <meta name="description" content="交通誘導員の検定配置路線を、住所・キーワード・施設名から参考判定できる案内ページです。対象地域は全国ですが一部未対応地域があります。最終確認は別途必要です。" />
+  <title>交通誘導員の検定配置路線を住所・施設名から参考判定｜案内ページ</title>
+  <meta name="description" content="交通誘導員の検定配置路線を、住所・施設名・道路名・キーワードから参考判定できる案内ページです。対象候補の絞り込みや確認の入口として利用できます。" />
   <meta name="robots" content="index,follow" />
   <link rel="canonical" href="https://sesimer9.github.io/front.html" />
 
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="交通誘導員の検定配置路線を住所から判定｜参考版案内ページ" />
-  <meta property="og:description" content="住所・キーワード・施設名から、交通誘導員の検定配置路線を参考判定できる案内ページです。" />
+  <meta property="og:title" content="交通誘導員の検定配置路線を住所・施設名から参考判定｜案内ページ" />
+  <meta property="og:description" content="住所・施設名・道路名・キーワードから、交通誘導員の検定配置路線を参考判定できる案内ページです。" />
   <meta property="og:url" content="https://sesimer9.github.io/front.html" />
   <meta property="og:site_name" content="交通誘導検定配置路線 判定案内" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="交通誘導員の検定配置路線を住所から判定｜参考版案内ページ" />
-  <meta name="twitter:description" content="住所・キーワード・施設名から、交通誘導員の検定配置路線を参考判定できる案内ページです。" />
+  <meta name="twitter:title" content="交通誘導員の検定配置路線を住所・施設名から参考判定｜案内ページ" />
+  <meta name="twitter:description" content="住所・施設名・道路名・キーワードから、交通誘導員の検定配置路線を参考判定できる案内ページです。" />
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-SMF9X91612"></script>
@@ -25,6 +25,40 @@
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-SMF9X91612');
+  </script>
+
+  <!-- FAQPage: GoogleのFAQリッチリザルトは2026年5月で終了したが、構造化データ自体は残しても問題ないとされています -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "検定配置路線とは何ですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "検定配置路線とは、交通誘導員の配置判断を行う際に確認対象となる路線のことです。このページでは、住所、地名、施設名、キーワードなどから、対象となる可能性を参考的に確認できます。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "このページの判定結果だけで最終判断できますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "いいえ。このページおよび判定機能は参考用です。実際の配置判断、提出資料への反映、現場運用の最終判断を行う場合は、関係資料や最新情報を別途確認してください。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "住所が分からない場合でも使えますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "はい。住所が不明な場合でも、施設名、地名、交差点名、道路名などのキーワードから参考確認できる場合があります。まずは分かる範囲の情報を入力し、候補を絞り込む入口として利用してください。"
+        }
+      }
+    ]
+  }
   </script>
 
   <style>
@@ -65,6 +99,10 @@
       padding: 56px 0 24px;
     }
 
+    main {
+      padding-bottom: 56px;
+    }
+
     .hero,
     .section,
     .notice {
@@ -76,6 +114,11 @@
 
     .hero {
       padding: 40px 28px;
+    }
+
+    .section,
+    .notice {
+      padding: 28px 24px;
     }
 
     .eyebrow {
@@ -101,11 +144,11 @@
       font-size: clamp(22px, 3vw, 30px);
       line-height: 1.3;
     }
-    
+
     h3 {
-  margin: 20px 0 8px;
-  font-size: 1.1rem;
-  line-height: 1.4;
+      margin: 20px 0 8px;
+      font-size: 1.1rem;
+      line-height: 1.4;
     }
 
     p {
@@ -150,19 +193,10 @@
       border: 1px solid var(--line);
     }
 
-    main {
-      padding-bottom: 56px;
-    }
-
     .grid {
       display: grid;
       gap: 20px;
       margin-top: 24px;
-    }
-
-    .section,
-    .notice {
-      padding: 28px 24px;
     }
 
     ul, ol {
@@ -175,6 +209,25 @@
     .notice {
       background: var(--warn-bg);
       border-color: var(--warn-line);
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+      height: auto;
+    }
+
+    .section img {
+      margin-top: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .image-caption {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      color: var(--muted);
     }
 
     footer {
@@ -196,15 +249,15 @@
     <div class="wrap">
       <section class="hero">
         <div class="eyebrow">交通誘導検定配置路線 参考案内</div>
-        <h1>交通誘導員の検定配置路線を住所などから判定できる参考ページ</h1>
+        <h1>交通誘導員の検定配置路線を住所・施設名・道路名などから参考判定できる案内ページ</h1>
         <p class="lead">
-          交通誘導員の検定配置路線に該当するかどうかを、住所、キーワード、施設名などから参考的に確認するための案内ページです。
+          交通誘導員の検定配置路線に該当するかどうかを、住所、施設名、道路名、交差点名、キーワードなどから参考的に確認するための案内ページです。
         </p>
         <p>
           検索や確認の入口として利用できる参考版であり、実際の運用や最終判断の前には、関係資料や最新情報による別途確認が必要です。
         </p>
         <div class="actions">
-          <a class="button button-primary" href="./index.html">判定を始める</a>
+          <a class="button button-primary" href="./index.html">住所・施設名から検定配置路線を判定する</a>
           <a class="button button-secondary" href="#howto">使い方を見る</a>
         </div>
       </section>
@@ -214,6 +267,35 @@
   <main>
     <div class="wrap">
       <div class="grid">
+        <section class="section">
+          <h2>判定画面のイメージ</h2>
+          <p>
+            地図表示、住所・施設名検索、判定結果の確認ができる参考画面です。初めて利用する方でも、どのような流れで確認できるかをイメージしやすくなります。
+          </p>
+          <img
+            src="./kentei-haichi-rosen-hantei-screen.jpg"
+            alt="交通誘導員の検定配置路線を住所や施設名から参考判定する画面。地図、検索欄、判定結果を表示。"
+            width="1200"
+            height="900"
+            loading="lazy"
+          />
+          <p class="image-caption">
+            実際の判定ページでは、住所・施設名・道路名などをもとに対象候補を参考確認できます。
+          </p>
+        </section>
+
+        <section class="section" id="about-route">
+          <h2>交通誘導員の検定配置路線とは</h2>
+          <p>
+            交通誘導員の検定配置路線とは、交通誘導警備業務を行う際に、検定合格警備員の配置判断に関わる路線のことです。
+            実際の配置判断では、都道府県ごとの指定路線や最新の関係資料を確認する必要があります。
+          </p>
+          <p>
+            この案内ページでは、住所、施設名、道路名、交差点名などから、対象となる可能性を参考的に絞り込むための入口情報を掲載しています。
+            最終的な判断を行う前には、必ず最新の資料や運用情報を別途確認してください。
+          </p>
+        </section>
+
         <section class="section">
           <h2>このページでできること</h2>
           <p>
@@ -247,38 +329,38 @@
         </section>
 
         <section class="section" id="examples">
-  <h2>入力例</h2>
-  <ul>
-    <li>住所で調べる例: 東京都新宿区西新宿2-8-1</li>
-    <li>施設名で調べる例: ○○駅前、△△市役所、□□インターチェンジ付近</li>
-    <li>キーワードで調べる例: 国道16号、県道○号、○○交差点、○○バイパス</li>
-  </ul>
-  <p>
-    住所が分かる場合は住所から、分からない場合は施設名や道路名、交差点名などから入力すると確認しやすくなります。
-  </p>
-</section>
+          <h2>入力例</h2>
+          <ul>
+            <li>住所で調べる例: 東京都新宿区西新宿2-8-1</li>
+            <li>施設名で調べる例: ○○駅前、△△市役所、□□インターチェンジ付近</li>
+            <li>キーワードで調べる例: 国道16号、県道○号、○○交差点、○○バイパス</li>
+          </ul>
+          <p>
+            住所が分かる場合は住所から、分からない場合は施設名や道路名、交差点名などから入力すると確認しやすくなります。
+          </p>
+        </section>
 
-<section class="section" id="faq">
-  <h2>よくある質問</h2>
+        <section class="section" id="faq">
+          <h2>よくある質問</h2>
 
-  <h3>検定配置路線とは何ですか？</h3>
-  <p>
-    検定配置路線とは、交通誘導員の配置判断を行う際に確認対象となる路線のことです。
-    このページでは、住所、地名、施設名、キーワードなどから、対象となる可能性を参考的に確認できます。
-  </p>
+          <h3>検定配置路線とは何ですか？</h3>
+          <p>
+            検定配置路線とは、交通誘導員の配置判断を行う際に確認対象となる路線のことです。
+            このページでは、住所、地名、施設名、キーワードなどから、対象となる可能性を参考的に確認できます。
+          </p>
 
-  <h3>このページの判定結果だけで最終判断できますか？</h3>
-  <p>
-    いいえ。このページおよび判定機能は参考用です。
-    実際の配置判断、提出資料への反映、現場運用の最終判断を行う場合は、関係資料や最新情報を別途確認してください。
-  </p>
+          <h3>このページの判定結果だけで最終判断できますか？</h3>
+          <p>
+            いいえ。このページおよび判定機能は参考用です。
+            実際の配置判断、提出資料への反映、現場運用の最終判断を行う場合は、関係資料や最新情報を別途確認してください。
+          </p>
 
-  <h3>住所が分からない場合でも使えますか？</h3>
-  <p>
-    はい。住所が不明な場合でも、施設名、地名、交差点名、道路名などのキーワードから参考確認できる場合があります。
-    まずは分かる範囲の情報を入力し、候補を絞り込む入口として利用してください。
-  </p>
-</section>
+          <h3>住所が分からない場合でも使えますか？</h3>
+          <p>
+            はい。住所が不明な場合でも、施設名、地名、交差点名、道路名などのキーワードから参考確認できる場合があります。
+            まずは分かる範囲の情報を入力し、候補を絞り込む入口として利用してください。
+          </p>
+        </section>
 
         <section class="notice">
           <h2>ご利用上の注意</h2>
@@ -293,7 +375,7 @@
         <section class="section">
           <h2>判定を始める</h2>
           <p>
-            実際の判定ページへ進む場合は、次のボタンから利用してください。
+            住所・施設名・道路名などから確認したい場合は、次の判定ページから利用してください。
           </p>
           <div class="actions">
             <a class="button button-primary" href="./index.html">交通誘導検定配置路線の判定ページへ進む</a>
