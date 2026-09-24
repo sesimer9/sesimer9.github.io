@@ -169,7 +169,7 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-const supportedPrefectures = ['山形県', '東京都', '千葉県', '埼玉県', '群馬県', '神奈川県', '富山県', '京都府', '島根県', '福岡県'];
+const supportedPrefectures = ['山形県', '東京都', '千葉県', '埼玉県', '群馬県', '神奈川県', '富山県', '岐阜県', '京都府', '島根県', '福岡県'];
 
 function isSupportedPrefecture(prefName) {
   return supportedPrefectures.includes(String(prefName || '').trim());
